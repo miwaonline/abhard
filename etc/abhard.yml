@@ -12,7 +12,7 @@ rro:
     - name: "file2"
       filename: "/home/miwa/log2.log"
   eusign:
-    - name: "korol"
-      keyfile: "/home/miwa/development/pythons/abhard/keys/korol/2243402555_2243402555_P211229195851.ZS2"
+    - name: "test1"
+      keyfile: "/home/miwa/development/pythons/abhard/keys/test1/2243402555_2243402555_P211229195851.ZS2"
       keypass: '2243'
       rroid: '1'

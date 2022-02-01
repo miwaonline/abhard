@@ -1,6 +1,4 @@
 #!/bin/bash
-# Доробки:
-# Переконатися що ordertaxnum всюди string
 
 # create a new shift
 curl -H "Content-Type: application/json" -X POST -d '{"cashier":"Test2", "test_mode": "1"}' localhost:8080/api/rro/eusign/shift/1
