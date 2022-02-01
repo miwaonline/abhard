@@ -1,0 +1,5 @@
+cert/
+doc/
+keys/
+lib/
+src/__pycache__/

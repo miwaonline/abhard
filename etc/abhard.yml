@@ -1,0 +1,18 @@
+database:
+  user: sysdba
+  pass: masterkey
+  host: localhost
+  name: localtest1
+webservice:
+  port: 8080
+rro:
+  textfile:
+    - name: "file1"
+      filename: "/home/miwa/log1.log"
+    - name: "file2"
+      filename: "/home/miwa/log2.log"
+  eusign:
+    - name: "korol"
+      keyfile: "/home/miwa/development/pythons/abhard/keys/korol/2243402555_2243402555_P211229195851.ZS2"
+      keypass: '2243'
+      rroid: '1'
