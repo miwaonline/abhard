@@ -100,7 +100,7 @@ rro:
       filename: "/var/log/abhard-log2.log"
   eusign_disabled:
     - name: "prro1"
-      keyfile: "/home/user/keys/korol/2243402555_2243402555_P211229195851.ZS2"
+      keyfile: "/home/user/keys/1234567890_1234567890_P123456789012.ZS2"
       keypass: '1234'
       rroid: '1'
 _EOF_
