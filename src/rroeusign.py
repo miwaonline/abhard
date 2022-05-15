@@ -145,7 +145,7 @@ class Shift:
                 receiptstr = start + ticket + stop
                 query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = 100'
                 rrodoc = fbclient.selectSQL(query, [rroid, shift_id])[0][0]
-                query = 'UPDATE rro_docs set doc_xml = ?, doc_receipt = ?, ordertaxnum = ? where id = ?'
+                query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
                 r = fbclient.execSQL(query, [xmlenc, receiptstr, ordertaxnum, rrodoc])
                 query = 'UPDATE rro_shifts set shift_start = ? where id = ?'
                 r = fbclient.execSQL(query, [now, shift_id])
@@ -246,7 +246,7 @@ class Shift:
                 receiptstr = start + ticket + stop
                 query = 'select id, localnum from rro_docs where rro_id = ? and shift_id = ? and doc_type = 101'
                 rrodoc,rroloc = fbclient.selectSQL(query, [rroid, shift_id])[0]
-                query = 'UPDATE rro_docs set doc_xml = ?, doc_receipt = ?, ordertaxnum = ? where id = ?'
+                query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
                 r = fbclient.execSQL(query, [xmlenc, receiptstr, ordertaxnum, rrodoc])
                 query = 'UPDATE rro_shifts set ordertaxnum_end = ?, shift_end = ? where id = ?'
                 r = fbclient.execSQL(query, [rroloc, now, shift_id])
@@ -346,7 +346,7 @@ class ZReport:
                 stop='</TICKET>'
                 ticket=response.text.split(start)[1].split(stop)[0]
                 ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
-                query = 'UPDATE rro_docs set doc_xml = ?, doc_receipt = ?, ordertaxnum = ? where \
+                query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where \
                     rro_id = ? and shift_id = ? and doc_type = 32768 and doc_subtype = 32768'
                 fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, rroid, shift_id])
                 res['result'] = 'OK'
@@ -451,7 +451,7 @@ class Receipt:
                 stop='</TICKET>'
                 ticket=response.text.split(start)[1].split(stop)[0]
                 ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
-                query = 'UPDATE rro_docs set doc_xml = ?, doc_receipt = ?, ordertaxnum = ? \
+                query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? \
                     where check_id = ? and doc_type = 0 and doc_subtype = 0'
                 fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, docid])
                 res['result'] = 'OK'
