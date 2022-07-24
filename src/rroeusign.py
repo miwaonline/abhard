@@ -69,6 +69,9 @@ class Shift:
         return { 'result': 'OK' }
 
     def POST(self, rroid):
+        '''
+        Start a new shift
+        '''
         try:
             input_json = cherrypy.request.json
             print(input_json)
@@ -169,6 +172,9 @@ class Shift:
                 }
     
     def PUT(self, rroid):
+        '''
+        Close current shift
+        '''
         try:
             input_json = cherrypy.request.json
             print(input_json)
@@ -485,15 +491,39 @@ class Receipt:
 
 @cherrypy.expose()
 class Command:
-    def GET(self, rroid, cmdname):
+    def GET(self, rroid, cmdname, docfiscalnum=None):
         try:
             query = 'SELECT r.CASHREGISTERNUM FROM R_RRO r \
                 where r.ID = ?'
-            fiscalnum = fbclient.selectSQL(query, [rroid])[0][0]
-            jsonreq = {
-                'Command': 'LastShiftTotals',
-                'NumFiscal': f'{fiscalnum}'
-            }
+            regfiscalnum = fbclient.selectSQL(query, [rroid])[0][0]
+            # prepare json depending on the cmdname
+            if cmdname == 'ServerState':
+                jsonreq = { 'Command': cmdname }
+            elif cmdname == 'TransactionsRegistrarState':
+                jsonreq = {
+                    'Command': f'{cmdname}', 'NumFiscal': f'{regfiscalnum}'
+                }
+            elif cmdname == 'LastShiftTotals':
+                jsonreq = {
+                    'Command': f'{cmdname}', 'NumFiscal': f'{regfiscalnum}'
+                }
+            elif cmdname == 'Check':
+                jsonreq = {
+                    'Command': f'{cmdname}', 'RegistrarNumFiscal': f'{regfiscalnum}',
+                     'NumFiscal': f'{docfiscalnum}', 'Original': True
+                }
+            elif cmdname == 'Documents':
+                jsonreq = {
+                    'Command': cmdname, 'NumFiscal': regfiscalnum,
+                    'OpenShiftFiscalNum': docfiscalnum
+                }
+            elif cmdname == 'ZRep':
+                jsonreq = {
+                    'Command': cmdname, 'RegistrarNumFiscal': f'{regfiscalnum}',
+                     'NumFiscal': f'{docfiscalnum}', 'Original': 'true'
+                }
+            else:
+                jsonreq = {}
             # encrypt request
             rawData = json.dumps(jsonreq).encode('utf-8')
             encData = []
@@ -505,8 +535,23 @@ class Command:
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
             response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
-            print(response.text)
-            return response.json()
+            if cmdname == 'ZRep':
+                start='<?xml'
+                stop='</ZREP>'
+                xml=start + response.text.split(start)[1].split(stop)[0] + stop
+                return {'status_code': response.status_code, 
+                    'message': xml,
+                    'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
+            elif cmdname == 'Check':
+                start='<?xml'
+                stop='</CHECK>'
+                xml=start + response.text.split(start)[1].split(stop)[0] + stop
+                return {'status_code': response.status_code, 
+                    'message': xml,
+                    'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
+            else:
+                print(response.text)
+                return response.json()
         except BaseException as err:
             print(str(err))
             return {
