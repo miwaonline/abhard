@@ -298,7 +298,11 @@ class ZReport:
             for row in rrodb:
                 xmlstr += row[0]
             print(xmlstr)
-            return {'result': 'OK', 'message': xmlstr }
+            return {
+                'result': 'OK', 
+                'message': xmlstr,
+                'b64message': base64.b64encode(bytes(str(xmlstr), 'utf-8'))
+                }
         except BaseException as err:
             print(str(err))
             return {
@@ -396,7 +400,8 @@ class Receipt:
             #append2file(dev['filename'], '-'*80)
             return { 
                 'result': 'OK',
-                'content': { 'number' : res[0][0], 'date': res[0][1].strftime('%d/%m/%Y') }
+                'message': { 'number' : res[0][0], 'date': res[0][1].strftime('%d/%m/%Y')
+                }
             }
         except BaseException as err:
             print(str(err))
@@ -462,6 +467,7 @@ class Receipt:
                 fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, docid])
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
+                res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
                 print(response.text)
                 # clean database
@@ -473,7 +479,7 @@ class Receipt:
                 # preprare error repsonse
                 res['result'] = 'Error'
                 res['message'] = response.text
-                res['b64encode'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
             return res
         except BaseException as err:
             print(str(err))
@@ -493,6 +499,7 @@ class Receipt:
 class Command:
     def GET(self, rroid, cmdname, docfiscalnum=None):
         try:
+            print(f'Executing command {cmdname}.')
             query = 'SELECT r.CASHREGISTERNUM FROM R_RRO r \
                 where r.ID = ?'
             regfiscalnum = fbclient.selectSQL(query, [rroid])[0][0]
@@ -539,9 +546,11 @@ class Command:
                 start='<?xml'
                 stop='</ZREP>'
                 xml=start + response.text.split(start)[1].split(stop)[0] + stop
-                return {'status_code': response.status_code, 
+                jsonresp = {'status_code': response.status_code, 
                     'message': xml,
                     'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
+                print(json.dumps(jsonresp))
+                return jsonresp
             elif cmdname == 'Check':
                 start='<?xml'
                 stop='</CHECK>'
