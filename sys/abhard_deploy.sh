@@ -14,11 +14,11 @@ This script deploys Abhard software and accepts the following parameters:
 
 Examples:
 
-$0 --version=1.0 --nocert -l
-    Deploy Abhard version 1.0, to the default location without certificates and libraries
+$0 --version=1.0 --cert -l
+    Deploy Abhard version 1.0, to the default location with certificates and libraries
 
 $0 --version=latest
-    Deploy the latest available Abhard and all the necessities
+    Deploy the latest available Abhard only to the default location
 
 Possible version values: stable, latest    
 "
