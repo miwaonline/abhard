@@ -156,9 +156,10 @@ class Shift:
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
                 res['message'] = 'Відповідь сервера збережено'
             else:
+                print(f'Помилка {response.status_code}')
                 print(response.text)
-                with open(f'response-{localnum}.txt', 'w') as f:
-                    f.write(response.text)
+                query = 'UPDATE rro_docs set doc_status = 2 where id = ?'
+                rrodb = fbclient.execSQL(query, [rrodoc])
                 res['result'] = 'Error'
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
                 res['message'] = response.text
@@ -260,9 +261,10 @@ class Shift:
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
+                print(f'Помилка {response.status_code}')
                 print(response.text)
-                with open(f'response-{localnum}.txt', 'w') as f:
-                    f.write(response.text)
+                query = 'UPDATE rro_docs set doc_status = 2 where id = ?'
+                rrodb = fbclient.execSQL(query, [rrodoc])
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
@@ -363,9 +365,11 @@ class ZReport:
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
+                print(f'Помилка {response.status_code}')
                 print(response.text)
-                with open(f'shifterror-{shift_id}.txt', 'w') as f:
-                    f.write(response.text)
+                query = 'UPDATE rro_docs set doc_status = 2 where  \
+                    rro_id = ? and shift_id = ? and doc_type = 32768 and doc_subtype = 32768'
+                rrodb = fbclient.execSQL(query, [rroid, shift_id])
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
@@ -469,11 +473,12 @@ class Receipt:
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
+                print(f'Помилка {response.status_code}')
                 print(response.text)
                 # clean database
-                query = 'UPDATE out_check set rro_status = 0, rro_docid = null where id = ?'
+                query = 'UPDATE out_check set rro_status = 2 where id = ?'
                 f = fbclient.execSQL(query, [docid])
-                query = 'DELETE from rro_docs \
+                query = 'UPDATE rro_docs set doc_status = 2 \
                     where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
                 rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
                 # preprare error repsonse
@@ -484,9 +489,9 @@ class Receipt:
         except BaseException as err:
             print(str(err))
             # clean database
-            query = 'UPDATE out_check set rro_status = 0, rro_docid = null where id = ?'
+            query = 'UPDATE out_check set rro_status = 2 where id = ?'
             f = fbclient.execSQL(query, [docid])
-            query = 'DELETE from rro_docs \
+            query = 'UPDATE rro_docs set doc_status = 2 \
                 where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
             rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
             return {
