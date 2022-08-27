@@ -10,6 +10,7 @@ import config
 import rro
 import rrotextfile
 import rroeusign
+from version import __version_info__, __version__
 
 @cherrypy.expose()
 @cherrypy.tools.json_in()
@@ -22,7 +23,7 @@ class AbhardAPI(object):
         result = {
             'result': 'OK',
             'message': str(datetime.utcnow().isoformat()),
-            'strmessage': 'Тестове повідомлення'
+            'version': __version__
         }
         return result
 
@@ -30,7 +31,10 @@ class Abhard(object):
     @cherrypy.expose
     def index(self):
         r = requests.get(url='http://localhost:8080/api')        
-        return 'Abhard запущений.<br/>Колись тут буде інструкція і статус/налаштування всіх пристроїв.<br/>А у далекому майбутньому ще щось.' + json.dumps(r.json())
+        return f"""Abhard {__version__} запущений.<br/>
+        Колись тут буде інструкція і статус/налаштування всіх пристроїв.<br/>
+        А у далекому майбутньому ще щось.<br/> 
+        {json.dumps(r.json())}"""
 
 def main():
     conf = {
