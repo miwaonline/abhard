@@ -13,12 +13,12 @@ def loadcfg():
 This is just an example how to analyse config just to have it stored somewhere
 '''
     for key in full:
-        print(f'{key} => {full[key]}')
+        cherrypy.log(f'{key} => {full[key]}')
         if key == 'rro':
             for rrotype in full[key]:
-                print(rrotype)
+                cherrypy.log(rrotype)
                 for device in full[key][rrotype]:
-                    print(device['name'])
+                    cherrypy.log(device['name'])
 
 def fancyloadcfg():
     '''

@@ -1,7 +1,7 @@
 # Registrar of Accounting Oprations API
 import cherrypy
 import fb
-import logging
+#import logging
 import config
 import xml.etree.ElementTree as ET
 #from xml.etree.ElementTree import tostring
@@ -21,14 +21,14 @@ fbclient = fb.fb(config.full['database']['host'],
     config.full['database']['name'], 
     config.full['database']['user'],
     config.full['database']['pass'])
-print("Database connection initialised")
+cherrypy.log("Database connection initialised")
 # Load crypto lib
 EUSignCP.EULoad()
 pIface = EUSignCP.EUGetInterface()
 try:
     pIface.Initialize()
 except Exception as e:
-    print ("EUSignCP initialise failed"  + str(e))
+    cherrypy.log ("EUSignCP initialise failed"  + str(e))
     EUSignCP.EUUnload()
     exit(1)
 dSettings = {}
@@ -36,11 +36,11 @@ pIface.GetFileStoreSettings(dSettings)
 path = pathlib.Path(__file__).parent.absolute().parent
 dSettings["szPath"] = f'{path}/cert'
 if len(dSettings["szPath"]) == 0:
-    print("Error crypto settings initialise")
+    cherrypy.log("Error crypto settings initialise")
     pIface.Finalize()
     EUSignCP.EUUnload()
     exit(2)
-print(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}")
+cherrypy.log(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}")
 
 if 'eusign' in config.full['rro']:
     dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == '1'), None)
@@ -51,9 +51,9 @@ if dev is not None:
         ownerinfo = {}
         if not pIface.IsPrivateKeyReaded():
             pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)
-            print('Certificate loaded successfully')
+            cherrypy.log('Certificate loaded successfully')
     except Exception as e:
-        print ("Certificate reading failed: "  + str(e))
+        cherrypy.log ("Certificate reading failed: "  + str(e))
         pIface.Finalize()
         EUSignCP.EUUnload()
         exit(3)
@@ -74,7 +74,7 @@ class Shift:
         '''
         try:
             input_json = cherrypy.request.json
-            print(input_json)
+            cherrypy.log(input_json)
             cashier = input_json["cashier"]
             if 'test_mode' in input_json:
                 test_mode = int(input_json["test_mode"]) == 1
@@ -156,8 +156,8 @@ class Shift:
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
                 res['message'] = 'Відповідь сервера збережено'
             else:
-                print(f'Помилка {response.status_code}')
-                print(response.text)
+                cherrypy.log(f'Помилка {response.status_code}')
+                cherrypy.log(response.text)
                 query = 'UPDATE rro_docs set doc_status = 2 where id = ?'
                 rrodb = fbclient.execSQL(query, [rrodoc])
                 res['result'] = 'Error'
@@ -165,7 +165,7 @@ class Shift:
                 res['message'] = response.text
             return res
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             return {
                 'result': 'Error',
                 'message': str(err),
@@ -178,7 +178,7 @@ class Shift:
         '''
         try:
             input_json = cherrypy.request.json
-            print(input_json)
+            cherrypy.log(input_json)
             shift_id = input_json["shift_id"]
             if 'test_mode' in input_json:
                 test_mode = int(input_json["test_mode"]) == 1
@@ -261,8 +261,8 @@ class Shift:
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
-                print(f'Помилка {response.status_code}')
-                print(response.text)
+                cherrypy.log(f'Помилка {response.status_code}')
+                cherrypy.log(response.text)
                 query = 'UPDATE rro_docs set doc_status = 2 where id = ?'
                 rrodb = fbclient.execSQL(query, [rrodoc])
                 res['result'] = 'Error'
@@ -270,7 +270,7 @@ class Shift:
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
             return res
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             return {
                 'result': 'Error',
                 'message': str(err),
@@ -282,7 +282,7 @@ class Shift:
 class ZReport:
     def GET(self, rroid, shift_id):
         '''
-        Print ZReport
+        cherrypy.log ZReport
         '''
         try:
             dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == rroid), None)
@@ -299,14 +299,14 @@ class ZReport:
             # prepare XML
             for row in rrodb:
                 xmlstr += row[0]
-            print(xmlstr)
+            cherrypy.log(xmlstr)
             return {
                 'result': 'OK', 
                 'message': xmlstr,
                 'b64message': base64.b64encode(bytes(str(xmlstr), 'utf-8'))
                 }
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             return {
                 'result': 'Error',
                 'message': str(err),
@@ -316,7 +316,7 @@ class ZReport:
     def POST(self, rroid):
         try:
             input_json = cherrypy.request.json
-            print(input_json)
+            cherrypy.log(input_json)
             shift_id = input_json["shift_id"]
             if 'test_mode' in input_json:
                 test_mode = int(input_json["test_mode"]) == 1
@@ -365,8 +365,8 @@ class ZReport:
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
-                print(f'Помилка {response.status_code}')
-                print(response.text)
+                cherrypy.log(f'Помилка {response.status_code}')
+                cherrypy.log(response.text)
                 query = 'UPDATE rro_docs set doc_status = 2 where  \
                     rro_id = ? and shift_id = ? and doc_type = 32768 and doc_subtype = 32768'
                 rrodb = fbclient.execSQL(query, [rroid, shift_id])
@@ -375,7 +375,7 @@ class ZReport:
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
             return res
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             return {
                 'result': 'Error',
                 'message': str(err),
@@ -408,7 +408,7 @@ class Receipt:
                 }
             }
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             return {
                 'result': 'Error',
                 'message': str(err),
@@ -421,7 +421,7 @@ class Receipt:
         '''
         try:
             input_json = cherrypy.request.json
-            print(input_json)
+            cherrypy.log(input_json)
             docid = input_json["doc_id"]
             shift_id = input_json["shift_id"]
             if 'test_mode' in input_json:
@@ -473,8 +473,8 @@ class Receipt:
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             else:
-                print(f'Помилка {response.status_code}')
-                print(response.text)
+                cherrypy.log(f'Помилка {response.status_code}')
+                cherrypy.log(response.text)
                 # clean database
                 query = 'UPDATE out_check set rro_status = 2 where id = ?'
                 f = fbclient.execSQL(query, [docid])
@@ -487,7 +487,7 @@ class Receipt:
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
             return res
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             # clean database
             query = 'UPDATE out_check set rro_status = 2 where id = ?'
             f = fbclient.execSQL(query, [docid])
@@ -504,7 +504,7 @@ class Receipt:
 class Command:
     def GET(self, rroid, cmdname, docfiscalnum=None):
         try:
-            print(f'Executing command {cmdname}.')
+            cherrypy.log(f'Executing command {cmdname}.')
             query = 'SELECT r.CASHREGISTERNUM FROM R_RRO r \
                 where r.ID = ?'
             regfiscalnum = fbclient.selectSQL(query, [rroid])[0][0]
@@ -554,7 +554,7 @@ class Command:
                 jsonresp = {'status_code': response.status_code, 
                     'message': xml,
                     'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
-                print(json.dumps(jsonresp))
+                cherrypy.log(json.dumps(jsonresp))
                 return jsonresp
             elif cmdname == 'Check':
                 start='<?xml'
@@ -564,10 +564,10 @@ class Command:
                     'message': xml,
                     'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
             else:
-                print(response.text)
+                cherrypy.log(response.text)
                 return response.json()
         except BaseException as err:
-            print(str(err))
+            cherrypy.log(str(err))
             return {
                 'result': 'Error',
                 'message': str(err),
