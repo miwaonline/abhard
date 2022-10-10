@@ -83,7 +83,6 @@ class fb:
                             fdb.isc_tpb_rec_version])
         self.con.begin(tpb = customTPB)
         cur = self.con.cursor()
-        cur.execute(query, params)
         try:
             result = (-1, 'Unprocessed')
             cur.execute(query, params)

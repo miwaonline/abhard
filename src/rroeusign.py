@@ -74,7 +74,7 @@ class Shift:
         '''
         try:
             input_json = cherrypy.request.json
-            cherrypy.log(input_json)
+            cherrypy.log(f'input_json = {input_json}')
             cashier = input_json["cashier"]
             if 'test_mode' in input_json:
                 test_mode = int(input_json["test_mode"]) == 1
@@ -178,7 +178,7 @@ class Shift:
         '''
         try:
             input_json = cherrypy.request.json
-            cherrypy.log(input_json)
+            cherrypy.log(f'input_json = {input_json}')
             shift_id = input_json["shift_id"]
             if 'test_mode' in input_json:
                 test_mode = int(input_json["test_mode"]) == 1
@@ -316,7 +316,7 @@ class ZReport:
     def POST(self, rroid):
         try:
             input_json = cherrypy.request.json
-            cherrypy.log(input_json)
+            cherrypy.log(f'input_json = {input_json}')
             shift_id = input_json["shift_id"]
             if 'test_mode' in input_json:
                 test_mode = int(input_json["test_mode"]) == 1
@@ -389,7 +389,8 @@ class Receipt:
         Return the document info
         '''
         try:
-            docid = input_json["doc_id"]
+            #docid = input_json["doc_id"]
+            docid = 1
             dev = next((item for item in config.full['rro']['textfile'] if item['name'] == name), None)
             if dev == None:
                 msgstr = f'Помилка конфігурації: немає пристрою з ІД {rroid}'
@@ -399,9 +400,6 @@ class Receipt:
                   'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
                 }
             res = fbclient.selectSQL('select number,doc_date from out_check where id = ?', [docid])
-            #append2file(dev['filename'], f'Requested information for receipt id {docid}')
-            #append2file(dev['filename'], f'Doc number is {res[0][0]}, date: {res[0][1].strftime("%d/%m/%Y")}')
-            #append2file(dev['filename'], '-'*80)
             return { 
                 'result': 'OK',
                 'message': { 'number' : res[0][0], 'date': res[0][1].strftime('%d/%m/%Y')
@@ -421,7 +419,7 @@ class Receipt:
         '''
         try:
             input_json = cherrypy.request.json
-            cherrypy.log(input_json)
+            cherrypy.log(f'input_json = {input_json}')
             docid = input_json["doc_id"]
             shift_id = input_json["shift_id"]
             if 'test_mode' in input_json:
@@ -441,14 +439,19 @@ class Receipt:
             # work with db
             query = 'UPDATE out_check set rro_status = 1 where id = ?'
             f = fbclient.execSQL(query, [docid])
+            cherrypy.log(f'Updated out_check for receipt No {docid}')
+            cherrypy.log(f'f = {f}')
             query = 'UPDATE rro_docs set doc_timestamp = ? where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0'
             rrodb = fbclient.execSQL(query, [now, rroid, shift_id, docid])
+            cherrypy.log(f'Updated rro_docs with timestamp {now}')
+            cherrypy.log(f'rrodb = {rrodb}')
             query = 'SELECT OUT FROM RRO_CHECK(?, ?, ?)'
             rrodb = fbclient.selectSQL(query, [docid, rroid, test_mode])
             xmlstr=''
             # prepare XML
             for row in rrodb:
                 xmlstr += row[0]
+            # cherrypy.log(f'xmlstr = {xmlstr}')
             # sign the file
             signedData = []
             pIface.SignDataInternal(True, xmlstr.encode('windows-1251'), len(xmlstr.encode('windows-1251')), None, signedData)
@@ -478,6 +481,7 @@ class Receipt:
                 # clean database
                 query = 'UPDATE out_check set rro_status = 2 where id = ?'
                 f = fbclient.execSQL(query, [docid])
+                cherrypy.log(f'Falled back doc_id {docid} to rro_status 2')
                 query = 'UPDATE rro_docs set doc_status = 2 \
                     where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
                 rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
