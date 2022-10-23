@@ -99,6 +99,9 @@ class Shift:
             query = 'SELECT id, ordertaxnum_start from rro_shifts \
                 where rro_id = ? and shift_end is null'
             shift_id, localnum = fbclient.selectSQL(query, [rroid])[0]
+
+            query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = 100'
+            rrodoc = fbclient.selectSQL(query, [rroid, shift_id])[0][0]
             # prepare XML
             check = ET.Element('CHECK', 
                 **{'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance'}, 
@@ -144,8 +147,6 @@ class Shift:
                 ticket=response.text.split(start)[1].split(stop)[0]
                 ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
                 receiptstr = start + ticket + stop
-                query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = 100'
-                rrodoc = fbclient.selectSQL(query, [rroid, shift_id])[0][0]
                 query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
                 r = fbclient.execSQL(query, [xmlenc, receiptstr, ordertaxnum, rrodoc])
                 query = 'UPDATE rro_shifts set shift_start = ? where id = ?'
@@ -202,6 +203,8 @@ class Shift:
             localnum = fbclient.selectSQL(query, [rroid, shift_id, 101])[0][0]
             query = 'select cashier from rro_shifts where rro_id = ? and id = ?'
             cashier = fbclient.selectSQL(query, [rroid, shift_id])[0][0]
+            query = 'select id, localnum from rro_docs where rro_id = ? and shift_id = ? and doc_type = 101'
+            rrodoc,rroloc = fbclient.selectSQL(query, [rroid, shift_id])[0]
             tz = pytz.timezone('Europe/Kiev')
             now = datetime.now(tz)
             # prepare XML
@@ -249,8 +252,6 @@ class Shift:
                 ticket=response.text.split(start)[1].split(stop)[0]
                 ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
                 receiptstr = start + ticket + stop
-                query = 'select id, localnum from rro_docs where rro_id = ? and shift_id = ? and doc_type = 101'
-                rrodoc,rroloc = fbclient.selectSQL(query, [rroid, shift_id])[0]
                 query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
                 r = fbclient.execSQL(query, [xmlenc, receiptstr, ordertaxnum, rrodoc])
                 query = 'UPDATE rro_shifts set ordertaxnum_end = ?, shift_end = ? where id = ?'
