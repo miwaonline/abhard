@@ -656,6 +656,7 @@ class Command:
 @cherrypy.expose()
 class Root:
     receipt = Receipt()
+    cashinout = Cashinout()
     zreport = ZReport()
     shift = Shift()
     cmd = Command()
