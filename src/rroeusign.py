@@ -382,7 +382,7 @@ class ZReport:
 
 @cherrypy.expose()
 class Cashinout:
-    def Post(self, rroid):
+    def POST(self, rroid):
         '''
         Send service in/out payments to the tax servers
         '''
