@@ -1,10 +1,8 @@
 # Registrar of Accounting Oprations API
 import cherrypy
 import fb
-#import logging
 import config
 import xml.etree.ElementTree as ET
-#from xml.etree.ElementTree import tostring
 import uuid
 from datetime import datetime
 import requests
@@ -383,14 +381,98 @@ class ZReport:
                 }
 
 @cherrypy.expose()
+class Cashinout:
+    def Post(self, rroid):
+        '''
+        Send service in/out payments to the tax servers
+        '''
+        try:
+            input_json = cherrypy.request.json
+            cherrypy.log(f'input_json = {input_json}')
+            shift_id = input_json["shift_id"]
+            doc_id = input_json["doc_id"]
+            if 'test_mode' in input_json:
+                test_mode = int(input_json["test_mode"]) == 1
+            else:
+                test_mode = False
+            dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == rroid), None)
+            if dev == None:
+                msgstr = f'Помилка конфігурації: немає пристрою з ІД {rroid}'
+                return {
+                  'result': 'Error',
+                  'message': msgstr,
+                  'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
+                }
+            tz = pytz.timezone('Europe/Kiev')
+            now = datetime.now(tz)
+            # We update doc_timestamp here because remote server wants it to be as close to "now" as possible
+            # while users sometemes fiscalise documents hours after creation which causes remote exceptions
+            query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
+            rrodb = fbclient.execSQL(query, [now, doc_id])
+            cherrypy.log(f'Updated rro_docs with timestamp {now}')
+            cherrypy.log(f'rrodb = {rrodb}')
+            query = 'SELECT OUT FROM RRO_SRVCASH(?, ?, ?, ?)'
+            rrodb = fbclient.selectSQL(query, [rroid, doc_id, shift_id, test_mode])
+            xmlstr=''
+            # prepare XML
+            for row in rrodb:
+                xmlstr += row[0]
+            cherrypy.log(f'xmlstr = {xmlstr}')
+            # sign the file
+            signedData = []
+            pIface.SignDataInternal(True, xmlstr.encode('windows-1251'), len(xmlstr.encode('windows-1251')), None, signedData)
+            payload = signedData[0]
+            checkedData=[]
+            pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
+            # send XML and get response
+            baseurl='https://fs.tax.gov.ua:8643/fs'
+            suburl='/doc'
+            headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
+            res = {}
+            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            if response.status_code == 200:
+                start='<?xml'
+                stop='</TICKET>'
+                ticket=response.text.split(start)[1].split(stop)[0]
+                ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
+                query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? \
+                    where id = ?'
+                fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, docid])
+                res['result'] = 'OK'
+                res['message'] = 'Відповідь сервера збережено'
+                res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+            else:
+                cherrypy.log(f'Помилка {response.status_code}')
+                cherrypy.log(response.text)
+                # clean database
+                query = 'UPDATE rro_docs set doc_status = 2 \
+                    where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
+                rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
+                cherrypy.log(f'Falled back doc_id {docid} to rro_status 2')
+                # preprare error repsonse
+                res['result'] = 'Error'
+                res['message'] = response.text
+                res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+            return res
+        except BaseException as err:
+            cherrypy.log(str(err))
+            # clean database
+            query = 'UPDATE rro_docs set doc_status = 2 \
+                where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
+            rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
+            return {
+                'result': 'Error',
+                'message': str(err),
+                'b64message': base64.b64encode(bytes(str(err), 'utf-8'))
+                }
+
+@cherrypy.expose()
 class Receipt:
-    def GET(self, rroid):
+    def GET(self, rroid, docid):
         '''
         Return the document info
         '''
         try:
-            #docid = input_json["doc_id"]
-            docid = 1
             dev = next((item for item in config.full['rro']['textfile'] if item['name'] == name), None)
             if dev == None:
                 msgstr = f'Помилка конфігурації: немає пристрою з ІД {rroid}'
@@ -436,11 +518,8 @@ class Receipt:
                 }
             tz = pytz.timezone('Europe/Kiev')
             now = datetime.now(tz)
-            # work with db
-            query = 'UPDATE out_check set rro_status = 1 where id = ?'
-            f = fbclient.execSQL(query, [docid])
-            cherrypy.log(f'Updated out_check for receipt No {docid}')
-            cherrypy.log(f'f = {f}')
+            # We update doc_timestamp here because remote server wants it to be as close to "now" as possible
+            # while users sometemes fiscalise documents hours after creation which causes remote exceptions
             query = 'UPDATE rro_docs set doc_timestamp = ? where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0'
             rrodb = fbclient.execSQL(query, [now, rroid, shift_id, docid])
             cherrypy.log(f'Updated rro_docs with timestamp {now}')
@@ -479,12 +558,10 @@ class Receipt:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
                 # clean database
-                query = 'UPDATE out_check set rro_status = 2 where id = ?'
-                f = fbclient.execSQL(query, [docid])
-                cherrypy.log(f'Falled back doc_id {docid} to rro_status 2')
                 query = 'UPDATE rro_docs set doc_status = 2 \
                     where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
                 rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
+                cherrypy.log(f'Falled back doc_id {docid} to rro_status 2')
                 # preprare error repsonse
                 res['result'] = 'Error'
                 res['message'] = response.text
@@ -493,8 +570,6 @@ class Receipt:
         except BaseException as err:
             cherrypy.log(str(err))
             # clean database
-            query = 'UPDATE out_check set rro_status = 2 where id = ?'
-            f = fbclient.execSQL(query, [docid])
             query = 'UPDATE rro_docs set doc_status = 2 \
                 where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
             rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])

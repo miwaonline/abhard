@@ -22,7 +22,8 @@ class AbhardAPI(object):
         """
         result = {
             'result': 'OK',
-            'message': str(datetime.utcnow().isoformat()),
+            'UTC time': str(datetime.utcnow().isoformat()),
+            'local time': str(datetime.now().isoformat()),
             'version': __version__
         }
         return result
@@ -31,10 +32,11 @@ class Abhard(object):
     @cherrypy.expose
     def index(self):
         r = requests.get(url='http://localhost:8080/api')        
-        return f"""Abhard {__version__} запущений.<br/>
-        Колись тут буде інструкція і статус/налаштування всіх пристроїв.<br/>
-        А у далекому майбутньому ще щось.<br/> 
-        {json.dumps(r.json())}"""
+        return f"""
+Abhard {__version__}.<br/>
+Колись тут буде інструкція і статус/налаштування всіх пристроїв.<br/>
+А у далекому майбутньому ще щось.<br/> 
+{json.dumps(r.json(), indent=4)}"""
 
 def main():
     conf = {
