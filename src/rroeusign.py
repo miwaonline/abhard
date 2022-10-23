@@ -437,7 +437,7 @@ class Cashinout:
                 ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
                 query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? \
                     where id = ?'
-                fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, docid])
+                fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, doc_id])
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
@@ -446,9 +446,9 @@ class Cashinout:
                 cherrypy.log(response.text)
                 # clean database
                 query = 'UPDATE rro_docs set doc_status = 2 \
-                    where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
-                rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
-                cherrypy.log(f'Falled back doc_id {docid} to rro_status 2')
+                    where id = ?'
+                rrodb = fbclient.execSQL(query, [doc_id])
+                cherrypy.log(f'Falled back doc_id {doc_id} to rro_status 2')
                 # preprare error repsonse
                 res['result'] = 'Error'
                 res['message'] = response.text
@@ -458,8 +458,8 @@ class Cashinout:
             cherrypy.log(str(err))
             # clean database
             query = 'UPDATE rro_docs set doc_status = 2 \
-                where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0 and ordertaxnum is null'
-            rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
+                where id = ?'
+            rrodb = fbclient.execSQL(query, [doc_id])
             return {
                 'result': 'Error',
                 'message': str(err),
