@@ -28,7 +28,7 @@ class fb:
                 )
                 cherrypy.log('Connect reestablished.')
             except fdb.fbcore.DatabaseError as dberr:
-                cherrypy.log('Database unavailable; keep trying')
+                cherrypy.log('... database unavailable; keep trying')
                 time.sleep(delay)
                 continue
             break
