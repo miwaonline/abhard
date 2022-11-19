@@ -1,13 +1,37 @@
 import fdb
+import cherrypy
 
 class fb:
     "Provides Firebird database interface"
     def __init__(self, dbhost, dbfile, dbuser, dbpass, dbport = 3050):
+        self.dbhost = dbhost
+        self.dbfile = dbfile
+        self.dbuser = dbuser
+        self.dbpass = dbpass
         self.con = fdb.connect(
-            host = dbhost, database = dbfile,
-            user = dbuser, password = dbpass, 
-            charset = 'UTF8', port = dbport
+            host = self.dbhost, database = self.dbfile,
+            user = self.dbuser, password = self.dbpass, 
+            charset = 'UTF8', port = self.dbport
         )
+
+    def reconnect(self):
+        cherrypy.log('Commenced reconnection')
+        delay = 1
+        while True:
+            if delay < 30:
+                delay += 1
+            try:
+                self.con = fdb.connect(
+                    host = self.dbhost, database = self.dbfile,
+                    user = self.dbuser, password = self.dbpass, 
+                    charset = 'UTF8', port = self.dbport
+                )
+                cherrypy.log('Connect reestablished.')
+            except fdb.fbcore.DatabaseError as dberr:
+                cherrypy.log('Database unavailable; keep trying')
+                time.sleep(delay)
+                continue
+            break
 
     def selectSQL(self, query, params=([])):
         "Select data from db"
@@ -16,9 +40,18 @@ class fb:
                             fdb.isc_tpb_wait,
                             fdb.isc_tpb_read_committed,
                             fdb.isc_tpb_rec_version])
-        self.con.begin(tpb = customTPB)
-        cur = self.con.cursor()
-        cur.execute(query, params)
+        try:
+            self.con.begin(tpb = customTPB)
+            cur = self.con.cursor()
+            cur.execute(query, params)
+        except fdb.fbcore.DatabaseError as dberr:
+            if dberr.args[2] == 335544726:
+                cherrypy.log('DB connection is closed; reconnecting')
+                self.con.close()
+                self.reconnect()
+            self.con.begin(tpb = customTPB)
+            cur = self.con.cursor()
+            cur.execute(query, params)
         result = cur.fetchall()
         cur.close()
         self.con.commit()
@@ -30,9 +63,18 @@ class fb:
                             fdb.isc_tpb_wait,
                             fdb.isc_tpb_read_committed,
                             fdb.isc_tpb_rec_version])
-        self.con.begin(tpb = customTPB)
-        cur = self.con.cursor()
-        cur.execute(query, params)
+        try:
+            self.con.begin(tpb = customTPB)
+            cur = self.con.cursor()
+            cur.execute(query, params)
+        except fdb.fbcore.DatabaseError as dberr:
+            if dberr.args[2] == 335544726:
+                cherrypy.log('DB connection is closed; reconnecting')
+                self.con.close()
+                self.reconnect()
+            self.con.begin(tpb = customTPB)
+            cur = self.con.cursor()
+            cur.execute(query, params)
         result = cur.fetchallmap()
         cur.close()
         self.con.commit()
@@ -81,9 +123,9 @@ class fb:
                             fdb.isc_tpb_write,
                             fdb.isc_tpb_read_committed,
                             fdb.isc_tpb_rec_version])
-        self.con.begin(tpb = customTPB)
-        cur = self.con.cursor()
         try:
+            self.con.begin(tpb = customTPB)
+            cur = self.con.cursor()
             result = (-1, 'Unprocessed')
             cur.execute(query, params)
         except fdb.ProgrammingError as a:
@@ -95,12 +137,25 @@ class fb:
             self.con.rollback()
             result = (-3, str(e))
         except fdb.DatabaseError as a:
-            cur.close()
-            self.con.rollback()
-            if 'ERROR_DYNAMIC' in str(a):
+            if a.args[2] == 335544726:
+                self.con.close()
+                self.reconnect()
+                self.con.begin(tpb = customTPB)
+                cur = self.con.cursor()
+                cur.execute(query, params)
+                # the next 3 lines are not good; they assume the query went fine
+                # but dont have a nice idea how to refactor the whole method atm
+                cur.close()
+                self.con.commit()
+                result = (0, 'Success')
+            elif 'ERROR_DYNAMIC' in str(a):
+                cur.close()
+                self.con.rollback()
                 b = str(a).split("\\n- ")
                 result = (-4, b[4])
             else:
+                cur.close()
+                self.con.rollback()
                 result = (-5, str(a))
         except fdb.Error as e:
             cur.close()
