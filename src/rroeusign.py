@@ -47,12 +47,14 @@ else:
 if dev is not None:
     try:
         cherrypy.log(f'Reading {dev["keyfile"]}')
+        if not pathlib.Path(dev['keyfile']).is_file():
+            raise Exception(f'File {dev["keyfile"]} not found')
         ownerinfo = {}
         if not pIface.IsPrivateKeyReaded():
             pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)
             cherrypy.log('Certificate loaded successfully')
     except Exception as e:
-        cherrypy.log ("Certificate reading failed: "  + str(e))
+        cherrypy.log ("Certificate reading failed: "  + repr(e))
         pIface.Finalize()
         EUSignCP.EUUnload()
         exit(3)
