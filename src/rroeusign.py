@@ -46,6 +46,7 @@ else:
     dev = None
 if dev is not None:
     try:
+        cherrypy.log(f'Reading {dev["keyfile"]}')
         ownerinfo = {}
         if not pIface.IsPrivateKeyReaded():
             pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)

@@ -5,6 +5,7 @@ class fb:
     "Provides Firebird database interface"
     def __init__(self, dbhost, dbfile, dbuser, dbpass, dbport = 3050):
         self.dbhost = dbhost
+        self.dbport = dbport
         self.dbfile = dbfile
         self.dbuser = dbuser
         self.dbpass = dbpass
