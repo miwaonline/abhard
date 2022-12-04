@@ -12,6 +12,8 @@ import EUSignCP
 import pathlib # to get current path
 import base64 # to bypass issue with Ukrainian messages
 import simplejson as json # otherwise we have decimal encoding errors in win
+import errno # to raise FileNotFound properly
+import os    # to raise FileNotFound properly
 
 # Initialisation tasks for the module
 # Initialise single db connection
@@ -48,13 +50,13 @@ if dev is not None:
     try:
         cherrypy.log(f'Reading {dev["keyfile"]}')
         if not pathlib.Path(dev['keyfile']).is_file():
-            raise Exception(f'File {dev["keyfile"]} not found')
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), dev["keyfile"])
         ownerinfo = {}
         if not pIface.IsPrivateKeyReaded():
             pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)
             cherrypy.log('Certificate loaded successfully')
     except Exception as e:
-        cherrypy.log ("Certificate reading failed: "  + repr(e))
+        cherrypy.log ("Certificate reading failed: "  + str(e))
         pIface.Finalize()
         EUSignCP.EUUnload()
         exit(3)
