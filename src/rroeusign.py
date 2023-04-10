@@ -4,7 +4,7 @@ import fb
 import config
 import xml.etree.ElementTree as ET
 import uuid
-from datetime import datetime
+import datetime
 import requests
 import gzip
 import pytz
@@ -16,6 +16,9 @@ import errno # to raise FileNotFound properly
 import os    # to raise FileNotFound properly
 
 # Initialisation tasks for the module
+baseurl='http://fs.tax.gov.ua:8609/fs'
+docsuburl='/doc'
+cmdsuburl='/cmd'
 # Initialise single db connection
 fbclient = fb.fb(config.full['database']['host'],
     config.full['database']['name'], 
@@ -92,7 +95,7 @@ class Shift:
                   'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
                 }
             tz = pytz.timezone('Europe/Kiev')
-            now = datetime.now(tz)
+            now = datetime.datetime.now(tz)
             # work with db
             query = 'EXECUTE procedure rro_newshift(?, ?)'
             r = fbclient.execSQL(query, [rroid, cashier])
@@ -141,11 +144,9 @@ class Shift:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 start='<?xml'
                 stop='</TICKET>'
@@ -211,7 +212,7 @@ class Shift:
             query = 'select id, localnum from rro_docs where rro_id = ? and shift_id = ? and doc_type = 101'
             rrodoc,rroloc = fbclient.selectSQL(query, [rroid, shift_id])[0]
             tz = pytz.timezone('Europe/Kiev')
-            now = datetime.now(tz)
+            now = datetime.datetime.now(tz)
             # prepare XML
             check = ET.Element('CHECK', 
                 **{'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance'}, 
@@ -246,11 +247,9 @@ class Shift:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 start='<?xml'
                 stop='</TICKET>'
@@ -352,11 +351,9 @@ class ZReport:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 start='<?xml'
                 stop='</TICKET>'
@@ -410,7 +407,7 @@ class Cashinout:
                   'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
                 }
             tz = pytz.timezone('Europe/Kiev')
-            now = datetime.now(tz)
+            now = datetime.datetime.now(tz)
             # We update doc_timestamp here because remote server wants it to be as close to "now" as possible
             # while users sometemes fiscalise documents hours after creation which causes remote exceptions
             query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
@@ -431,11 +428,9 @@ class Cashinout:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 start='<?xml'
                 stop='</TICKET>'
@@ -523,7 +518,7 @@ class Receipt:
                   'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
                 }
             tz = pytz.timezone('Europe/Kiev')
-            now = datetime.now(tz)
+            now = datetime.datetime.now(tz)
             # We update doc_timestamp here because remote server wants it to be as close to "now" as possible
             # while users sometemes fiscalise documents hours after creation which causes remote exceptions
             query = 'UPDATE rro_docs set doc_timestamp = ? where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 0'
@@ -544,11 +539,9 @@ class Receipt:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 start='<?xml'
                 stop='</TICKET>'
@@ -636,7 +629,7 @@ class ReceiptReturn:
                   'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
                 }
             tz = pytz.timezone('Europe/Kiev')
-            now = datetime.now(tz)
+            now = datetime.datetime.now(tz)
             # We update doc_timestamp here because remote server wants it to be as close to "now" as possible
             # while users sometemes fiscalise documents hours after creation which causes remote exceptions
             query = 'UPDATE rro_docs set doc_timestamp = ? where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 1'
@@ -657,11 +650,9 @@ class ReceiptReturn:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 start='<?xml'
                 stop='</TICKET>'
@@ -717,11 +708,6 @@ class Command:
                 jsonreq = {
                     'Command': f'{cmdname}', 'NumFiscal': f'{regfiscalnum}'
                 }
-            elif cmdname == 'TransactionsRegistrarState':
-                jsonreq = {
-                    'Command': f'{cmdname}', 'NumFiscal': f'{docfiscalnum}',
-                    'IncludeTaxObject': True
-                }
             elif cmdname == 'Check':
                 jsonreq = {
                     'Command': f'{cmdname}', 'RegistrarNumFiscal': f'{regfiscalnum}',
@@ -753,12 +739,10 @@ class Command:
             encData = []
             pIface.SignDataInternal(True, rawData, len(rawData), None, encData)
             payload=encData[0]
-            # send JSON and get response
-            baseurl='http://fs.tax.gov.ua:8609/fs'
-            suburl='/cmd'
+            # send JSON and get response            
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
+            response = requests.post(baseurl + cmdsuburl, data=gzip.compress(payload), headers=headers)
             if response.status_code == 200:
                 if cmdname == 'ZRep':
                     start='<?xml'
