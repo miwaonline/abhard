@@ -113,6 +113,8 @@ Description=Abacus hardware adapter
 After=multi-user.target
 
 [Service]
+RestartSec=10
+Restart=on-failure
 Type=simple
 Environment=PYTHONUNBUFFERED=1
 Environment=LD_LIBRARY_PATH=/opt/abhard/lib

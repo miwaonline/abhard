@@ -745,25 +745,33 @@ class Command:
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
             response = requests.post(baseurl + suburl, data=gzip.compress(payload), headers=headers)
-            if cmdname == 'ZRep':
-                start='<?xml'
-                stop='</ZREP>'
-                xml=start + response.text.split(start)[1].split(stop)[0] + stop
-                jsonresp = {'status_code': response.status_code, 
-                    'message': xml,
-                    'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
-                cherrypy.log(json.dumps(jsonresp))
-                return jsonresp
-            elif cmdname == 'Check':
-                start='<?xml'
-                stop='</CHECK>'
-                xml=start + response.text.split(start)[1].split(stop)[0] + stop
-                return {'status_code': response.status_code, 
-                    'message': xml,
-                    'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
+            if response.status_code == 200:
+                if cmdname == 'ZRep':
+                    start='<?xml'
+                    stop='</ZREP>'
+                    xml=start + response.text.split(start)[1].split(stop)[0] + stop
+                    jsonresp = {'status_code': response.status_code, 
+                        'message': xml,
+                        'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
+                    cherrypy.log(json.dumps(jsonresp))
+                    return jsonresp
+                elif cmdname == 'Check':
+                    start='<?xml'
+                    stop='</CHECK>'
+                    xml=start + response.text.split(start)[1].split(stop)[0] + stop
+                    return {'status_code': response.status_code, 
+                        'message': xml,
+                        'b64message': base64.b64encode(bytes(str(xml), 'utf-8'))}
+                else:
+                    cherrypy.log(response.text)
+                    return response.json()
             else:
+                cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
-                return response.json()
+                # preprare error repsonse
+                res['result'] = 'Error'
+                res['message'] = response.text
+                res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
         except BaseException as err:
             cherrypy.log(str(err))
             return {
