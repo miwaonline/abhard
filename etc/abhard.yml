@@ -13,8 +13,8 @@ rro:
       filename: "/home/miwa/log2.log"
   eusign:
     - name: 'test1'
-      keyfile: 'keys/sk/2480001434_2480001434_P230103230826.ZS2'
+      keyfile: 'keys/baron/2840916985_2840916985_P220603105631.ZS2'
       keyfileb: '/home/miwa/development/pythons/abhard/keys/baron/2840916985_2840916985_P220603105631.ZS2'
       keyfilec: '/home/miwa/development/pythons/abhard/keys/sk/2480001434_2480001434_P230103230826.ZS2'
-      keypass: '2480'
+      keypass: '2840'
       rroid: '1'

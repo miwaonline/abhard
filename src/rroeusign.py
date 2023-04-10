@@ -141,7 +141,7 @@ class Shift:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -246,7 +246,7 @@ class Shift:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -352,7 +352,7 @@ class ZReport:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -431,7 +431,7 @@ class Cashinout:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -544,7 +544,7 @@ class Receipt:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -657,7 +657,7 @@ class ReceiptReturn:
             checkedData=[]
             pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
             # send XML and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/doc'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -754,7 +754,7 @@ class Command:
             pIface.SignDataInternal(True, rawData, len(rawData), None, encData)
             payload=encData[0]
             # send JSON and get response
-            baseurl='https://fs.tax.gov.ua:8643/fs'
+            baseurl='http://fs.tax.gov.ua:8609/fs'
             suburl='/cmd'
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
