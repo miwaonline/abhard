@@ -717,6 +717,11 @@ class Command:
                 jsonreq = {
                     'Command': f'{cmdname}', 'NumFiscal': f'{regfiscalnum}'
                 }
+            elif cmdname == 'TransactionsRegistrarState':
+                jsonreq = {
+                    'Command': f'{cmdname}', 'NumFiscal': f'{docfiscalnum}',
+                    'IncludeTaxObject': True
+                }
             elif cmdname == 'Check':
                 jsonreq = {
                     'Command': f'{cmdname}', 'RegistrarNumFiscal': f'{regfiscalnum}',
@@ -726,6 +731,15 @@ class Command:
                 jsonreq = {
                     'Command': cmdname, 'NumFiscal': regfiscalnum,
                     'OpenShiftFiscalNum': docfiscalnum
+                }
+            elif cmdname == 'Shifts':
+                StartDate = datetime.datetime.now() - datetime.timedelta(hours=72) 
+                StartDate = StartDate.astimezone().replace(microsecond=0).isoformat()
+                StopDate = datetime.datetime.now().astimezone().replace(microsecond=0).isoformat()
+                jsonreq = {
+                    'Command': cmdname, 'NumFiscal': regfiscalnum,
+                    'From': StartDate, 
+                    'To': StopDate
                 }
             elif cmdname == 'ZRep':
                 jsonreq = {
