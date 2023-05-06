@@ -160,6 +160,7 @@ class Shift:
                 res['result'] = 'OK'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
                 res['message'] = 'Відповідь сервера збережено'
+                res['status_code'] = response.status_code
             else:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
@@ -168,6 +169,7 @@ class Shift:
                 res['result'] = 'Error'
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
                 res['message'] = response.text
+                res['status_code'] = response.status_code
             return res
         except BaseException as err:
             cherrypy.log(str(err))
@@ -263,6 +265,7 @@ class Shift:
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+                res['status_code'] = response.status_code
             else:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
@@ -271,6 +274,7 @@ class Shift:
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['status_code'] = response.status_code
             return res
         except BaseException as err:
             cherrypy.log(str(err))
@@ -365,6 +369,7 @@ class ZReport:
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+                res['status_code'] = response.status_code
             else:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
@@ -374,6 +379,7 @@ class ZReport:
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['status_code'] = response.status_code
             return res
         except BaseException as err:
             cherrypy.log(str(err))
@@ -442,6 +448,7 @@ class Cashinout:
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+                res['status_code'] = response.status_code
             else:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
@@ -454,6 +461,7 @@ class Cashinout:
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['status_code'] = response.status_code
             return res
         except BaseException as err:
             cherrypy.log(str(err))
@@ -553,6 +561,7 @@ class Receipt:
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+                res['status_code'] = response.status_code
             else:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
@@ -565,6 +574,7 @@ class Receipt:
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['status_code'] = response.status_code
             return res
         except BaseException as err:
             cherrypy.log(str(err))
@@ -642,7 +652,6 @@ class ReceiptReturn:
             # prepare XML
             for row in rrodb:
                 xmlstr += row[0]
-            # cherrypy.log(f'xmlstr = {xmlstr}')
             # sign the file
             signedData = []
             pIface.SignDataInternal(True, xmlstr.encode('windows-1251'), len(xmlstr.encode('windows-1251')), None, signedData)
@@ -664,6 +673,7 @@ class ReceiptReturn:
                 res['result'] = 'OK'
                 res['message'] = 'Відповідь сервера збережено'
                 res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+                res['status_code'] = response.status_code
             else:
                 cherrypy.log(f'Помилка {response.status_code}')
                 cherrypy.log(response.text)
@@ -676,12 +686,95 @@ class ReceiptReturn:
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['status_code'] = response.status_code
             return res
         except BaseException as err:
             cherrypy.log(str(err))
             # clean database
             query = 'UPDATE rro_docs set doc_status = 2 \
                 where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 1 and ordertaxnum is null'
+            rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
+            return {
+                'result': 'Error',
+                'message': str(err),
+                'b64message': base64.b64encode(bytes(str(err), 'utf-8'))
+                }
+
+@cherrypy.expose()
+class ReceiptCancel:
+    def POST(self, rroid):
+        try:
+            input_json = cherrypy.request.json
+            cherrypy.log(f'input_json = {input_json}')
+            docid = input_json["doc_id"]
+            shift_id = input_json["shift_id"]
+            if 'test_mode' in input_json:
+                test_mode = int(input_json["test_mode"]) == 1
+            else:
+                test_mode = False
+            dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == rroid), None)
+            if dev == None:
+                msgstr = f'Помилка конфігурації: немає пристрою з ІД {rroid}'
+                return {
+                  'result': 'Error',
+                  'message': msgstr,
+                  'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
+                }
+            tz = pytz.timezone('Europe/Kiev')
+            now = datetime.datetime.now(tz)
+            # We update doc_timestamp here because remote server wants it to be as close to "now" as possible
+            # while users sometemes fiscalise documents hours after creation which causes remote exceptions
+            query = 'UPDATE rro_docs set doc_timestamp = ? where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 5'
+            rrodb = fbclient.execSQL(query, [now, rroid, shift_id, docid])
+            cherrypy.log(f'Updated rro_docs with timestamp {now}')
+            cherrypy.log(f'rrodb = {rrodb}')
+            query = 'SELECT OUT FROM RRO_CHECKSTORNO(?, ?, ?)'
+            rrodb = fbclient.selectSQL(query, [docid, rroid, test_mode])
+            xmlstr=''
+            # prepare XML
+            for row in rrodb:
+                xmlstr += row[0]
+            # sign the file
+            signedData = []
+            pIface.SignDataInternal(True, xmlstr.encode('windows-1251'), len(xmlstr.encode('windows-1251')), None, signedData)
+            payload = signedData[0]
+            checkedData=[]
+            pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
+            # send XML and get response
+            headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
+            res = {}
+            response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=headers)
+            if response.status_code == 200:
+                start='<?xml'
+                stop='</TICKET>'
+                ticket=response.text.split(start)[1].split(stop)[0]
+                ordertaxnum=ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
+                query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? \
+                    where check_id = ? and doc_type = 0 and doc_subtype = 5'
+                fbclient.execSQL(query, [xmlstr, start + ticket + stop, ordertaxnum, docid])
+                res['result'] = 'OK'
+                res['message'] = 'Відповідь сервера збережено'
+                res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+                res['status_code'] = response.status_code
+            else:
+                cherrypy.log(f'Помилка {response.status_code}')
+                cherrypy.log(response.text)
+                # clean database
+                query = 'UPDATE rro_docs set doc_status = 2 \
+                    where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 5 and ordertaxnum is null'
+                rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
+                cherrypy.log(f'Falled back doc_id {docid} to rro_status 2')
+                # preprare error repsonse
+                res['result'] = 'Error'
+                res['message'] = response.text
+                res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                res['status_code'] = response.status_code
+            return res
+        except BaseException as err:
+            cherrypy.log(str(err))
+            # clean database
+            query = 'UPDATE rro_docs set doc_status = 2 \
+                where rro_id = ? and shift_id = ? and check_id = ? and doc_type = 0 and doc_subtype = 5 and ordertaxnum is null'
             rrodb = fbclient.execSQL(query, [rroid, shift_id, docid])
             return {
                 'result': 'Error',
@@ -769,6 +862,7 @@ class Command:
                 # preprare error repsonse
                 res['result'] = 'Error'
                 res['message'] = response.text
+                res['status_code'] = response.status_code
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
         except BaseException as err:
             cherrypy.log(str(err))
@@ -782,6 +876,7 @@ class Command:
 class Root:
     receipt = Receipt()
     receiptreturn = ReceiptReturn()
+    receiptcancel = ReceiptCancel()
     cashinout = Cashinout()
     zreport = ZReport()
     shift = Shift()

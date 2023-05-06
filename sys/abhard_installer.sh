@@ -19,6 +19,7 @@ Examples:
 
 $0 --version=1.0 --nosoft -l
     Install Abhard version 1.0, do not install dependant software and libraries
+    (please keep in mind certificates will be updated in this case)
 
 $0 --version=latest
     Install the latest available Abhard and all the necessities
