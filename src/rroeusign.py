@@ -5,9 +5,9 @@ import config
 import xml.etree.ElementTree as ET
 import uuid
 import datetime
+import pytz
 import requests
 import gzip
-import pytz
 import EUSignCP
 import pathlib # to get current path
 import base64 # to bypass issue with Ukrainian messages
@@ -16,9 +16,6 @@ import errno # to raise FileNotFound properly
 import os    # to raise FileNotFound properly
 
 # Initialisation tasks for the module
-baseurl='http://fs.tax.gov.ua:8609/fs'
-docsuburl='/doc'
-cmdsuburl='/cmd'
 # Initialise single db connection
 fbclient = fb.fb(config.full['database']['host'],
     config.full['database']['name'], 
@@ -63,6 +60,99 @@ if dev is not None:
         pIface.Finalize()
         EUSignCP.EUUnload()
         exit(3)
+
+class BaseRequest:
+    def __init__(self):
+        # set global vars and their defaults
+        self.baseurl='http://fs.tax.gov.ua:8609/fs'
+        self.docsuburl='/doc'
+        self.cmdsuburl='/cmd'        
+        self.headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip'}
+        self.cashier = None
+        self.shift_id = None
+        self.rrodoc_id = None
+        self.test_mode = False
+        self.dev = None
+
+    def processInput(self, rroid, input_json):
+        # so far there's only one dev so 
+        self.dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == rroid), None)
+        if self.dev == None:
+            msgstr = f'Помилка конфігурації: немає пристрою з ІД {rroid}'
+            return {
+              'result': 'Error',
+              'message': msgstr,
+              'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
+            }
+        cherrypy.log(f'input_json = {self.input_json}')
+        self.cashier = input_json.get('cashier')
+        self.shift_id = input_json.get('shift_id')
+        self.test_mode = int(input_json.get('test_mode', 0)) == 1
+
+    def processResponse(self, response):
+        if response.status_code == 200:
+            start = '<?xml'
+            stop = '</TICKET>'
+            ticket = response.text.split(start)[1].split(stop)[0]
+            ordertaxnum = ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
+            receiptstr = start + ticket + stop
+            query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
+            r = fbclient.execSQL(query, [xmlenc, receiptstr, ordertaxnum, self.rrodoc_id])
+            res['result'] = 'OK'
+            res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
+            res['message'] = 'Відповідь сервера збережено'
+            res['status_code'] = self.response.status_code
+        else:
+            cherrypy.log(f'Помилка {response.status_code}')
+            cherrypy.log(response.text)
+            query = 'UPDATE rro_docs set doc_status = 2 where id = ?'
+            rrodb = fbclient.execSQL(query, [self.rrodoc_id])
+            res['result'] = 'Error'
+            res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+            res['message'] = response.text
+            res['status_code'] = response.status_code
+        return res
+
+    def getRrodocID(self, doc_type, doc_subtype):
+        query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? and doc_subtype = ?'
+        result = fbclient.selectSQL(query, [rroid, self.shift_id, doc_type, doc_subtype])
+        return result[0][0]
+
+    def getXMLDoc(self):
+        query = 'SELECT OUT FROM RRO_ZREPORT(?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [shift_id, rroid, test_mode])
+        xmlstr=''
+        # prepare XML
+        for row in rrodb:
+            xmlstr += row[0]
+        return xmlstr
+
+    def signXMLDoc(self, xmlstr):
+        signedData = []
+        pIface.SignDataInternal(True, xmlstr, len(xmlstr), None, signedData)
+        payload = signedData[0]
+        checkedData=[]
+        pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
+        return payload
+
+    def postData(self, payload):
+        self.headers['Content-Length'] = str(len(payload))
+        res = {}
+        response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=self.headers)
+
+    def POST(self, rroid):
+        processInput(self, rroid, cherrypy.request.json)
+        ukrnow = datetime.datetime.now(pytz.timezone('Europe/Kiev'))
+        rrodoc_id = getRrodocID(self, 0, 0)
+        xmldoc = getXMLDoc(self)
+        payload = signXMLDoc(self, xmldoc)
+        response = postData(self, payload)
+        result = processResponse(response)
+        return result
+
+class Shift2(BaseRequest):
+    def POST(self, rroid):
+        return super().POST(self, rroid)
 
 @cherrypy.expose()
 class Shift:

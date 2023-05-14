@@ -10,7 +10,7 @@ with open(cfg, 'r') as configfile:
 
 def loadcfg():
     '''
-This is just an example how to analyse config just to have it stored somewhere
+This is an example how to analyse config just to have it stored somewhere
 '''
     for key in full:
         cherrypy.log(f'{key} => {full[key]}')
