@@ -129,6 +129,9 @@ class fb:
             cur = self.con.cursor()
             result = (-1, 'Unprocessed')
             cur.execute(query, params)
+            result = cur.fetchone()
+            cur.close()
+            self.con.commit()
         except fdb.ProgrammingError as a:
             cur.close()
             self.con.rollback()
@@ -144,8 +147,8 @@ class fb:
                 self.con.begin(tpb = customTPB)
                 cur = self.con.cursor()
                 cur.execute(query, params)
-                # the next 3 lines are not good; they assume the query went fine
-                # but dont have a nice idea how to refactor the whole method atm
+                # the next 3 lines are not perferct; they assume the query went fine
+                # but I dont have a nice idea how to refactor the whole method atm
                 cur.close()
                 self.con.commit()
                 result = (0, 'Success')
@@ -164,10 +167,10 @@ class fb:
             result = (-6, str(e))
         except:
             raise
-        else:
-            cur.close()
-            self.con.commit()
-            result = (0, 'Success')
+        # else:
+        #     cur.close()
+        #     self.con.commit()
+        #     result = (0, 'Success')
         finally:
             return result
 

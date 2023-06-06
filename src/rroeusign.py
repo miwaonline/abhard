@@ -5,6 +5,7 @@ import config
 import xml.etree.ElementTree as ET
 import uuid
 import datetime
+import zoneinfo
 import pytz
 import requests
 import gzip
@@ -22,44 +23,61 @@ fbclient = fb.fb(config.full['database']['host'],
     config.full['database']['user'],
     config.full['database']['pass'])
 cherrypy.log("Database connection initialised")
-# Load crypto lib
-EUSignCP.EULoad()
-pIface = EUSignCP.EUGetInterface()
-try:
-    pIface.Initialize()
-except Exception as e:
-    cherrypy.log ("EUSignCP initialise failed"  + str(e))
-    EUSignCP.EUUnload()
-    exit(1)
-dSettings = {}
-pIface.GetFileStoreSettings(dSettings)
-path = pathlib.Path(__file__).parent.absolute().parent
-dSettings["szPath"] = f'{path}/cert'
-if len(dSettings["szPath"]) == 0:
-    cherrypy.log("Error crypto settings initialise")
-    pIface.Finalize()
-    EUSignCP.EUUnload()
-    exit(2)
-cherrypy.log(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}")
 
-if 'eusign' in config.full['rro']:
-    dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == '1'), None)
-else:
-    dev = None
-if dev is not None:
-    try:
-        cherrypy.log(f'Reading {dev["keyfile"]}')
-        if not pathlib.Path(dev['keyfile']).is_file():
-            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), dev["keyfile"])
-        ownerinfo = {}
-        if not pIface.IsPrivateKeyReaded():
-            pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)
-            cherrypy.log('Certificate loaded successfully')
-    except Exception as e:
-        cherrypy.log ("Certificate reading failed: "  + str(e))
-        pIface.Finalize()
-        EUSignCP.EUUnload()
-        exit(3)
+class EUSign:
+    pIface = None
+
+    def __init__(self):
+        if EUSign.pIface is not None:
+            return
+        # Load crypto lib
+        EUSignCP.EULoad()
+        EUSign.pIface = EUSignCP.EUGetInterface()
+        try:
+            EUSign.pIface.Initialize()
+        except Exception as e:
+            cherrypy.log ("EUSignCP initialise failed"  + str(e))
+            EUSignCP.EUUnload()
+            exit(1)
+        dSettings = {}
+        EUSign.pIface.GetFileStoreSettings(dSettings)
+        path = pathlib.Path(__file__).parent.absolute().parent
+        dSettings["szPath"] = f'{path}/cert'
+        if len(dSettings["szPath"]) == 0:
+            cherrypy.log("Error crypto settings initialise")
+            EUSign.pIface.Finalize()
+            EUSignCP.EUUnload()
+            exit(2)
+        EUSign.pIface.SetFileStoreSettings(dSettings)
+        cherrypy.log(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}")
+
+        if 'eusign' in config.full['rro']:
+            dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == '1'), None)
+        else:
+            dev = None
+        if dev is not None:
+            try:
+                cherrypy.log(f'Reading {dev["keyfile"]}')
+                if not pathlib.Path(dev['keyfile']).is_file():
+                    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), dev["keyfile"])
+                ownerinfo = {}
+                if not EUSign.pIface.IsPrivateKeyReaded():
+                    EUSign.pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)
+                    cherrypy.log('Certificate loaded successfully')
+            except Exception as e:
+                cherrypy.log ("Certificate reading failed: "  + str(e))
+                EUSign.pIface.Finalize()
+                EUSignCP.EUUnload()
+                exit(3)
+
+    def signXMLDoc(self, xmlstr):
+        s = bytes(xmlstr, 'utf-8')
+        signedData = []
+        EUSign.pIface.SignDataInternal(True, s, len(s), None, signedData)
+        payload = signedData[0]
+        checkedData = []
+        EUSign.pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
+        return payload
 
 class BaseRequest:
     def __init__(self):
@@ -73,6 +91,9 @@ class BaseRequest:
         self.rrodoc_id = None
         self.test_mode = False
         self.dev = None
+        self.doc_type = None
+        self.doc_subtype = None
+        self.euiface = EUSign()
 
     def processInput(self, rroid, input_json):
         # so far there's only one dev so 
@@ -84,12 +105,33 @@ class BaseRequest:
               'message': msgstr,
               'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
             }
-        cherrypy.log(f'input_json = {self.input_json}')
-        self.cashier = input_json.get('cashier')
-        self.shift_id = input_json.get('shift_id')
+        cherrypy.log(f'input_json = {input_json}')
+        self.cashier = input_json.get('cashier', None)
+        self.shift_id = input_json.get('shift_id', None)
+        self.doc_id = input_json.get('doc_id', None)
         self.test_mode = int(input_json.get('test_mode', 0)) == 1
 
+    def getRrodocID(self):
+        query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? and doc_subtype = ?'
+        result = fbclient.selectSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.doc_subtype])
+        if len(result) > 0:
+            return result[0][0]
+        else:
+            return None
+
+    def prepareXMLDoc(self):
+        xmlstr='This method should be redefined in child class'
+        return xmlstr
+
+    def postData(self, payload):
+        return {'status_code': 400,'message':'Test'}
+        self.headers['Content-Length'] = str(len(payload))
+        res = {}
+        response = requests.post(self.baseurl + self.docsuburl, data=gzip.compress(payload), headers=self.headers)
+        return response
+
     def processResponse(self, response):
+        cherrypy.log(f'{response=}')
         if response.status_code == 200:
             start = '<?xml'
             stop = '</TICKET>'
@@ -113,46 +155,168 @@ class BaseRequest:
             res['status_code'] = response.status_code
         return res
 
-    def getRrodocID(self, doc_type, doc_subtype):
-        query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? and doc_subtype = ?'
-        result = fbclient.selectSQL(query, [rroid, self.shift_id, doc_type, doc_subtype])
-        return result[0][0]
+    def POST(self, rroid):
+        self.processInput(rroid, cherrypy.request.json)
+        ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.rrodoc_id = self.getRrodocID()
+        xmldoc = self.prepareXMLDoc()
+        payload = self.euiface.signXMLDoc(xmldoc)
+        response = self.postData(payload)
+        result = self.processResponse(response)
+        return result
 
-    def getXMLDoc(self):
-        query = 'SELECT OUT FROM RRO_ZREPORT(?, ?, ?)'
-        rrodb = fbclient.selectSQL(query, [shift_id, rroid, test_mode])
+    def PUT(self, rroid):
+        self.processInput(rroid, cherrypy.request.json)
+        self.rrodoc_id = self.getRrodocID()
+        cherrypy.log(f'{self.rrodoc_id=}')
+        xmldoc = self.prepareXMLDoc()
+        payload = self.signXMLDoc(xmldoc)
+        response = self.postData(payload)
+        result = self.processResponse(response)
+        return result
+
+@cherrypy.expose()
+class Shift2(BaseRequest):
+    def __init__(self):
+        super().__init__()
+        self.doc_subtype = 0
+
+    def prepareXMLDoc(self):
+        query = 'SELECT id, ordertaxnum_start from rro_shifts \
+            where rro_id = ? and shift_end is null'
+        res = fbclient.selectSQL(query, [self.dev['rroid']])        
+        if res == []:
+            query = 'INSERT into rro_shifts(rro_id, cashier)values(?, ?) returning id'
+            self.shift_id = fbclient.execSQL(query, [self.dev['rroid'], self.cashier])[0]
+            query = 'INSERT into rro_docs(rro_id, shift_id, doc_type, doc_timestamp) values(?, ?, ?, current_timestamp) returning LOCALNUM'
+            self.localnum = fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type])
+            query = 'UPDATE rro_shifts set ordertaxnum_start = ? where id = ?'
+            fbclient.execSQL(query, [self.localnum, self.shift_id])
+        else:
+            self.shift_id, self.localnum = res[0]
+        query = 'SELECT OUT FROM RRO_SHIFT(?, ?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [self.shift_id, self.dev['rroid'], self.test_mode, self.doc_type])
         xmlstr=''
         # prepare XML
         for row in rrodb:
             xmlstr += row[0]
         return xmlstr
 
-    def signXMLDoc(self, xmlstr):
-        signedData = []
-        pIface.SignDataInternal(True, xmlstr, len(xmlstr), None, signedData)
-        payload = signedData[0]
-        checkedData=[]
-        pIface.VerifyDataInternal(None, payload, len(payload), checkedData, None)
-        return payload
+    def POST(self, rroid):
+        ''' Open new shift '''
+        self.doc_type = 100
+        return super().POST(rroid)
 
-    def postData(self, payload):
-        self.headers['Content-Length'] = str(len(payload))
-        res = {}
-        response = requests.post(baseurl + docsuburl, data=gzip.compress(payload), headers=self.headers)
+    def PUT(self, rroid):
+        ''' Close current shift '''
+        self.doc_type = 101
+        return super().PUT(rroid)
+
+@cherrypy.expose()
+class ZReport2(BaseRequest):
+    def __init__(self):
+        super().__init__()
+        self.doc_type = 32768
+        self.doc_subtype = 32768
+
+    def prepareXMLDoc(self):
+        query = 'UPDATE or INSERT into rro_docs(rro_id, shift_id, doc_type, doc_subtype, doc_timestamp)\
+          values(?, ?, 32768, 32768, current_timestamp) \
+          matching(rro_id, shift_id, doc_type, doc_subtype)'
+        fbclient.execSQL(query, [rroid, shift_id])
+        query = 'SELECT OUT FROM RRO_ZREPORT(?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [self.shift_id, self.dev['rroid'], self.test_mode])
+        xmlstr=''
+        # prepare XML
+        for row in rrodb:
+            xmlstr += row[0]
+        return xmlstr
 
     def POST(self, rroid):
-        processInput(self, rroid, cherrypy.request.json)
-        ukrnow = datetime.datetime.now(pytz.timezone('Europe/Kiev'))
-        rrodoc_id = getRrodocID(self, 0, 0)
-        xmldoc = getXMLDoc(self)
-        payload = signXMLDoc(self, xmldoc)
-        response = postData(self, payload)
-        result = processResponse(response)
-        return result
+        ''' Open new shift '''
+        return super().POST(rroid)
 
-class Shift2(BaseRequest):
+@cherrypy.expose()
+class Cashinout2(BaseRequest):
+    def __init__(self):
+        super().__init__()
+        self.doc_type = 0
+        self.doc_subtype = 0
+
+    def prepareXMLDoc(self):
+        query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
+        fbclient.execSQL(query, [self.rrodoc_id])
+        query = 'SELECT OUT FROM RRO_SRVCASH(?, ?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [self.dev['rroid'], self.doc_id, self.shift_id, self.test_mode])
+        xmlstr=''
+        # prepare XML
+        for row in rrodb:
+            xmlstr += row[0]
+        return xmlstr
+
     def POST(self, rroid):
-        return super().POST(self, rroid)
+        return super().POST(rroid)
+
+@cherrypy.expose()
+class Receipt2(BaseRequest):
+    def prepareXMLDoc(self):
+        query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
+        fbclient.execSQL(query, [self.rrodoc_id])
+        query = 'SELECT OUT FROM RRO_CHECK(?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [self.doc_id, self.dev['rroid'], self.test_mode])
+        xmlstr=''
+        # prepare XML
+        for row in rrodb:
+            xmlstr += row[0]
+        return xmlstr
+
+    def POST(self, rroid):
+        ''' Post new receipt '''
+        return super().POST(rroid)
+
+@cherrypy.expose()
+class ReceiptReturn2(BaseRequest):
+    def __init__(self):
+        super().__init__()
+        self.doc_type = 0
+        self.doc_subtype = 1
+
+    def prepareXMLDoc(self):
+        query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
+        fbclient.execSQL(query, [self.rrodoc_id])
+        query = 'SELECT OUT FROM RRO_CHECKRETURN(?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [self.doc_id, self.dev['rroid'], self.test_mode])
+        xmlstr=''
+        # prepare XML
+        for row in rrodb:
+            xmlstr += row[0]
+        return xmlstr
+
+    def POST(self, rroid):
+        ''' Post new receipt '''
+        return super().POST(rroid)
+
+@cherrypy.expose()
+class ReceiptCancel2(BaseRequest):
+    def __init__(self):
+        super().__init__()
+        self.doc_type = 0
+        self.doc_subtype = 1
+
+    def prepareXMLDoc(self):
+        query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
+        fbclient.execSQL(query, [self.rrodoc_id])
+        query = 'SELECT OUT FROM RRO_CHECKSTORNO(?, ?, ?)'
+        rrodb = fbclient.selectSQL(query, [self.doc_id, self.dev['rroid'], self.test_mode])
+        xmlstr=''
+        # prepare XML
+        for row in rrodb:
+            xmlstr += row[0]
+        return xmlstr
+
+    def POST(self, rroid):
+        ''' Post new receipt '''
+        return super().POST(rroid)
 
 @cherrypy.expose()
 class Shift:
@@ -874,7 +1038,19 @@ class ReceiptCancel:
 
 @cherrypy.expose()
 class Command:
+    def __init__(self):
+        # set global vars and their defaults
+        self.baseurl='http://fs.tax.gov.ua:8609/fs'
+        self.docsuburl='/doc'
+        self.cmdsuburl='/cmd'        
+        self.headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip'}
+        self.euiface = EUSign()
+
     def GET(self, rroid, cmdname, docfiscalnum=None):
+        baseurl='http://fs.tax.gov.ua:8609/fs'
+        docsuburl='/doc'
+        cmdsuburl='/cmd'        
+        headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip'}
         try:
             cherrypy.log(f'Executing command {cmdname}.')
             query = 'SELECT r.CASHREGISTERNUM FROM R_RRO r \
@@ -918,10 +1094,9 @@ class Command:
             else:
                 jsonreq = {}
             # encrypt request
-            rawData = json.dumps(jsonreq).encode('utf-8')
+            rawData = json.dumps(jsonreq)
             encData = []
-            pIface.SignDataInternal(True, rawData, len(rawData), None, encData)
-            payload=encData[0]
+            payload = self.euiface.signXMLDoc(rawData)
             # send JSON and get response            
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
@@ -970,6 +1145,12 @@ class Root:
     cashinout = Cashinout()
     zreport = ZReport()
     shift = Shift()
+    receipt2 = Receipt2()
+    receiptreturn2 = ReceiptReturn2()
+    receiptcancel2 = ReceiptCancel2()
+    cashinout2 = Cashinout2()
+    zreport2 = ZReport2()
+    shift2 = Shift2()
     cmd = Command()
 
     def GET(self):
