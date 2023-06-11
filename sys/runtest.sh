@@ -18,6 +18,10 @@ SHIFTID=3
 # update out_check set rro_status = 1 where id = $CHECKID
 curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"$CHECKID", "shift_id":"$SHIFTID", "test_mode": "1" }' localhost:8080/api/rro/eusign/receipt/1
 
+# return an item from a fiscal check
+# update out_check set rro_status = 1, note=$STORNED_CHECK_ID where id = $CHECKID
+curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"$CHECKID", "shift_id":"$SHIFTID", "test_mode": "1" }' localhost:8080/api/rro/eusign/receiptreturn/1
+
 # cancel some check
 #insert into rro_docs(RRO_ID,SHIFT_ID,CHECK_ID,DOC_TYPE,DOC_SUBTYPE,DOC_SUM) values(:rroid, :shiftid, new.id, 0, 5, new.sll_summ)
 curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"$CHECKID", "shift_id":"$SHIFTID", "test_mode": "1" }' localhost:8080/api/rro/eusign/receiptcancel/1

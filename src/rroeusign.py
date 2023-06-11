@@ -5,8 +5,10 @@ import config
 import xml.etree.ElementTree as ET
 import uuid
 import datetime
-import zoneinfo
-import pytz
+try:
+    import zoneinfo
+except ImportError:
+    import pytz
 import requests
 import gzip
 import EUSignCP
@@ -16,13 +18,12 @@ import simplejson as json # otherwise we have decimal encoding errors in win
 import errno # to raise FileNotFound properly
 import os    # to raise FileNotFound properly
 
-# Initialisation tasks for the module
 # Initialise single db connection
 fbclient = fb.fb(config.full['database']['host'],
     config.full['database']['name'], 
     config.full['database']['user'],
     config.full['database']['pass'])
-cherrypy.log("Database connection initialised")
+cherrypy.log(f"Connected to the database {config.full['database']['host']}:{config.full['database']['name']}", 'ABHARD')
 
 class EUSign:
     pIface = None
@@ -36,7 +37,7 @@ class EUSign:
         try:
             EUSign.pIface.Initialize()
         except Exception as e:
-            cherrypy.log ("EUSignCP initialise failed"  + str(e))
+            cherrypy.log("EUSignCP initialise failed"  + str(e), 'ABHARD')
             EUSignCP.EUUnload()
             exit(1)
         dSettings = {}
@@ -44,12 +45,12 @@ class EUSign:
         path = pathlib.Path(__file__).parent.absolute().parent
         dSettings["szPath"] = f'{path}/cert'
         if len(dSettings["szPath"]) == 0:
-            cherrypy.log("Error crypto settings initialise")
+            cherrypy.log("Error crypto settings initialise", 'ABHARD')
             EUSign.pIface.Finalize()
             EUSignCP.EUUnload()
             exit(2)
         EUSign.pIface.SetFileStoreSettings(dSettings)
-        cherrypy.log(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}")
+        cherrypy.log(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}", 'ABHARD')
 
         if 'eusign' in config.full['rro']:
             dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == '1'), None)
@@ -57,21 +58,21 @@ class EUSign:
             dev = None
         if dev is not None:
             try:
-                cherrypy.log(f'Reading {dev["keyfile"]}')
+                cherrypy.log(f'Reading {dev["keyfile"]}', 'ABHARD')
                 if not pathlib.Path(dev['keyfile']).is_file():
                     raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), dev["keyfile"])
                 ownerinfo = {}
                 if not EUSign.pIface.IsPrivateKeyReaded():
                     EUSign.pIface.ReadPrivateKeyFile(dev['keyfile'], dev['keypass'], ownerinfo)
-                    cherrypy.log('Certificate loaded successfully')
+                    cherrypy.log('Certificate loaded successfully', 'ABHARD')
             except Exception as e:
-                cherrypy.log ("Certificate reading failed: "  + str(e))
+                cherrypy.log ("Certificate reading failed: "  + str(e), 'ABHARD')
                 EUSign.pIface.Finalize()
                 EUSignCP.EUUnload()
                 exit(3)
 
     def signXMLDoc(self, xmlstr):
-        s = bytes(xmlstr, 'utf-8')
+        s = bytes(xmlstr, 'windows-1251')
         signedData = []
         EUSign.pIface.SignDataInternal(True, s, len(s), None, signedData)
         payload = signedData[0]
@@ -105,14 +106,14 @@ class BaseRequest:
               'message': msgstr,
               'b64message': base64.b64encode(bytes(msgstr, 'utf-8'))
             }
-        cherrypy.log(f'input_json = {input_json}')
+        cherrypy.log(f'input_json = {input_json}', 'ABHARD')
         self.cashier = input_json.get('cashier', None)
         self.shift_id = input_json.get('shift_id', None)
         self.doc_id = input_json.get('doc_id', None)
         self.test_mode = int(input_json.get('test_mode', 0)) == 1
 
     def getRrodocID(self):
-        query = 'select id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? and doc_subtype = ?'
+        query = 'SELECT id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? and doc_subtype = ?'
         result = fbclient.selectSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.doc_subtype])
         if len(result) > 0:
             return result[0][0]
@@ -124,76 +125,94 @@ class BaseRequest:
         return xmlstr
 
     def postData(self, payload):
-        return {'status_code': 400,'message':'Test'}
         self.headers['Content-Length'] = str(len(payload))
         res = {}
         response = requests.post(self.baseurl + self.docsuburl, data=gzip.compress(payload), headers=self.headers)
         return response
 
     def processResponse(self, response):
-        cherrypy.log(f'{response=}')
+        cherrypy.log(f'{response.status_code=}', 'ABHARD')
+        res = dict()
         if response.status_code == 200:
             start = '<?xml'
             stop = '</TICKET>'
             ticket = response.text.split(start)[1].split(stop)[0]
             ordertaxnum = ticket.split('<ORDERTAXNUM>')[1].split('</ORDERTAXNUM>')[0]
+            cherrypy.log(f'Document {self.rrodoc_id} got {ordertaxnum=}','ABHARD')
             receiptstr = start + ticket + stop
             query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
-            r = fbclient.execSQL(query, [xmlenc, receiptstr, ordertaxnum, self.rrodoc_id])
+            r = fbclient.execSQL(query, [self.xmldoc, receiptstr, ordertaxnum, self.rrodoc_id])
             res['result'] = 'OK'
             res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             res['message'] = 'Відповідь сервера збережено'
-            res['status_code'] = self.response.status_code
+            res['status_code'] = response.status_code
         else:
-            cherrypy.log(f'Помилка {response.status_code}')
-            cherrypy.log(response.text)
-            query = 'UPDATE rro_docs set doc_status = 2 where id = ?'
-            rrodb = fbclient.execSQL(query, [self.rrodoc_id])
+            cherrypy.log(f'{response.text=}', 'ABHARD')
+            query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_status = 2 where id = ?'
+            rrodb = fbclient.execSQL(query, [self.xmldoc,self.rrodoc_id])
             res['result'] = 'Error'
             res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
             res['message'] = response.text
             res['status_code'] = response.status_code
         return res
 
+    def getUkrainianNow(self):
+        if sys.version_info < (3, 9, 0):
+            return datetime.datetime.now(pytz.timezone('Europe/Kiev'))
+        else:
+            return datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+
     def POST(self, rroid):
         self.processInput(rroid, cherrypy.request.json)
-        ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
         self.rrodoc_id = self.getRrodocID()
-        xmldoc = self.prepareXMLDoc()
-        payload = self.euiface.signXMLDoc(xmldoc)
+        cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
+        self.xmldoc = self.prepareXMLDoc()
+        payload = self.euiface.signXMLDoc(self.xmldoc)
         response = self.postData(payload)
         result = self.processResponse(response)
         return result
 
     def PUT(self, rroid):
         self.processInput(rroid, cherrypy.request.json)
+        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
         self.rrodoc_id = self.getRrodocID()
-        cherrypy.log(f'{self.rrodoc_id=}')
-        xmldoc = self.prepareXMLDoc()
-        payload = self.signXMLDoc(xmldoc)
+        self.xmldoc = self.prepareXMLDoc()
+        payload = self.euiface.signXMLDoc(self.xmldoc)
         response = self.postData(payload)
         result = self.processResponse(response)
         return result
 
 @cherrypy.expose()
 class Shift2(BaseRequest):
-    def __init__(self):
-        super().__init__()
-        self.doc_subtype = 0
+
+    def getRrodocID(self):
+        query = 'SELECT id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? '
+        result = fbclient.selectSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type])
+        if len(result) > 0:
+            return result[0][0]
+        else:
+            return None
 
     def prepareXMLDoc(self):
         query = 'SELECT id, ordertaxnum_start from rro_shifts \
             where rro_id = ? and shift_end is null'
         res = fbclient.selectSQL(query, [self.dev['rroid']])        
         if res == []:
-            query = 'INSERT into rro_shifts(rro_id, cashier)values(?, ?) returning id'
-            self.shift_id = fbclient.execSQL(query, [self.dev['rroid'], self.cashier])[0]
-            query = 'INSERT into rro_docs(rro_id, shift_id, doc_type, doc_timestamp) values(?, ?, ?, current_timestamp) returning LOCALNUM'
-            self.localnum = fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type])
+            cherrypy.log('Creating new shift', 'ABHARD')
+            query = 'INSERT into rro_shifts(rro_id, cashier, shift_start)values(?, ?, ?) returning id'
+            self.shift_id = fbclient.execSQL(query, [self.dev['rroid'], self.cashier, self.ukrnow])[0]
+            query = 'INSERT into rro_docs(rro_id, shift_id, doc_type, doc_timestamp) values(?, ?, ?, ?) returning LOCALNUM'
+            self.localnum = fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.ukrnow])[0]
             query = 'UPDATE rro_shifts set ordertaxnum_start = ? where id = ?'
             fbclient.execSQL(query, [self.localnum, self.shift_id])
+            cherrypy.log(f'{self.localnum=}', 'ABHARD')
         else:
-            self.shift_id, self.localnum = res[0]
+            cherrypy.log('Updating existing shift', 'ABHARD')
+            query = 'INSERT into rro_docs(rro_id, shift_id, doc_type, doc_timestamp) values(?, ?, ?, ?) returning LOCALNUM'
+            self.localnum = fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.ukrnow])[0]
+            cherrypy.log(f'{self.localnum=}', 'ABHARD')
+            self.shift_id = res[0][0]
         query = 'SELECT OUT FROM RRO_SHIFT(?, ?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.shift_id, self.dev['rroid'], self.test_mode, self.doc_type])
         xmlstr=''
@@ -221,9 +240,9 @@ class ZReport2(BaseRequest):
 
     def prepareXMLDoc(self):
         query = 'UPDATE or INSERT into rro_docs(rro_id, shift_id, doc_type, doc_subtype, doc_timestamp)\
-          values(?, ?, 32768, 32768, current_timestamp) \
+          values(?, ?, ?, ?, ?) \
           matching(rro_id, shift_id, doc_type, doc_subtype)'
-        fbclient.execSQL(query, [rroid, shift_id])
+        fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.doc_subtype, self.ukrnow])
         query = 'SELECT OUT FROM RRO_ZREPORT(?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.shift_id, self.dev['rroid'], self.test_mode])
         xmlstr=''
@@ -241,11 +260,16 @@ class Cashinout2(BaseRequest):
     def __init__(self):
         super().__init__()
         self.doc_type = 0
-        self.doc_subtype = 0
+        # 2 for in, 4 for out, but we dont actually use it here
+        self.doc_subtype = 4
+
+    def getRrodocID(self):
+        # for cash we work directly with the rro_doc
+        return self.doc_id
 
     def prepareXMLDoc(self):
         query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
-        fbclient.execSQL(query, [self.rrodoc_id])
+        fbclient.execSQL(query, [self.ukrnow, self.rrodoc_id])
         query = 'SELECT OUT FROM RRO_SRVCASH(?, ?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.dev['rroid'], self.doc_id, self.shift_id, self.test_mode])
         xmlstr=''
@@ -259,13 +283,29 @@ class Cashinout2(BaseRequest):
 
 @cherrypy.expose()
 class Receipt2(BaseRequest):
+    def __init__(self):
+        super().__init__()
+        self.doc_type = 0
+        self.doc_subtype = 0
+
+    def getRrodocID(self):
+        query = '''SELECT id from rro_docs 
+            where rro_id = ? and shift_id = ? and check_id = ?  
+            and doc_type = ? and doc_subtype = ?'''
+        result = fbclient.selectSQL(query, 
+            [self.dev['rroid'], self.shift_id, self.doc_id, 
+            self.doc_type, self.doc_subtype])
+        if len(result) > 0:
+            return result[0][0]
+        else:
+            return None
+
     def prepareXMLDoc(self):
         query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
-        fbclient.execSQL(query, [self.rrodoc_id])
+        dbres = fbclient.execSQL(query, [self.ukrnow, self.rrodoc_id])
         query = 'SELECT OUT FROM RRO_CHECK(?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.doc_id, self.dev['rroid'], self.test_mode])
         xmlstr=''
-        # prepare XML
         for row in rrodb:
             xmlstr += row[0]
         return xmlstr
@@ -281,13 +321,24 @@ class ReceiptReturn2(BaseRequest):
         self.doc_type = 0
         self.doc_subtype = 1
 
+    def getRrodocID(self):
+        query = '''SELECT id from rro_docs 
+            where rro_id = ? and shift_id = ? and check_id = ?  
+            and doc_type = ? and doc_subtype = ?'''
+        result = fbclient.selectSQL(query, 
+            [self.dev['rroid'], self.shift_id, self.doc_id, 
+            self.doc_type, self.doc_subtype])
+        if len(result) > 0:
+            return result[0][0]
+        else:
+            return None
+
     def prepareXMLDoc(self):
         query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
-        fbclient.execSQL(query, [self.rrodoc_id])
+        fbclient.execSQL(query, [self.ukrnow, self.rrodoc_id])
         query = 'SELECT OUT FROM RRO_CHECKRETURN(?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.doc_id, self.dev['rroid'], self.test_mode])
         xmlstr=''
-        # prepare XML
         for row in rrodb:
             xmlstr += row[0]
         return xmlstr
@@ -301,11 +352,11 @@ class ReceiptCancel2(BaseRequest):
     def __init__(self):
         super().__init__()
         self.doc_type = 0
-        self.doc_subtype = 1
+        self.doc_subtype = 5
 
     def prepareXMLDoc(self):
         query = 'UPDATE rro_docs set doc_timestamp = ? where id = ?'
-        fbclient.execSQL(query, [self.rrodoc_id])
+        fbclient.execSQL(query, [self.ukrnow, self.rrodoc_id])
         query = 'SELECT OUT FROM RRO_CHECKSTORNO(?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.doc_id, self.dev['rroid'], self.test_mode])
         xmlstr=''
@@ -1052,7 +1103,7 @@ class Command:
         cmdsuburl='/cmd'        
         headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip'}
         try:
-            cherrypy.log(f'Executing command {cmdname}.')
+            cherrypy.log(f'Executing command {cmdname}.', 'ABHARD')
             query = 'SELECT r.CASHREGISTERNUM FROM R_RRO r \
                 where r.ID = ?'
             regfiscalnum = fbclient.selectSQL(query, [rroid])[0][0]
@@ -1122,15 +1173,15 @@ class Command:
                     cherrypy.log(response.text)
                     return response.json()
             else:
-                cherrypy.log(f'Помилка {response.status_code}')
-                cherrypy.log(response.text)
+                cherrypy.log(f'Помилка {response.status_code}', 'ABHARD')
+                cherrypy.log(response.text, 'ABHARD')
                 # preprare error repsonse
                 res['result'] = 'Error'
                 res['message'] = response.text
                 res['status_code'] = response.status_code
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
         except BaseException as err:
-            cherrypy.log(str(err))
+            cherrypy.log(str(err), 'ABHARD')
             return {
                 'result': 'Error',
                 'message': str(err),

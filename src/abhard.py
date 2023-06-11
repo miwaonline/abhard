@@ -57,7 +57,7 @@ def main():
     webapp.api.rro.eusign = rroeusign.Root()
     cherrypy.server.socket_host = '0.0.0.0'
     cherrypy.server.socket_port = config.full['webservice']['port']
-    cherrypy.log(f'Launching Abhard version {__version__}')
+    cherrypy.log(f'Launching Abhard version {__version__}', 'ABHARD')
     cherrypy.quickstart(webapp, '/', conf)
 
 if __name__ == '__main__':
