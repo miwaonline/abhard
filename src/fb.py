@@ -129,9 +129,8 @@ class fb:
             cur = self.con.cursor()
             result = (-1, 'Unprocessed')
             cur.execute(query, params)
+            #looks like this line breaks everything
             result = cur.fetchone()
-            cur.close()
-            self.con.commit()
         except fdb.ProgrammingError as a:
             cur.close()
             self.con.rollback()
@@ -141,7 +140,7 @@ class fb:
             self.con.rollback()
             result = (-3, str(e))
         except fdb.DatabaseError as a:
-            if a.args[2] == 335544726:
+            if (len(a.args) > 1) and (a.args[2] == 335544726):
                 self.con.close()
                 self.reconnect()
                 self.con.begin(tpb = customTPB)
@@ -157,6 +156,10 @@ class fb:
                 self.con.rollback()
                 b = str(a).split("\\n- ")
                 result = (-4, b[4])
+            elif 'statement that does not produce result set' in str(a):
+                cur.close()
+                self.con.commit()
+                result = (0, 'Success')
             else:
                 cur.close()
                 self.con.rollback()
@@ -165,12 +168,15 @@ class fb:
             cur.close()
             self.con.rollback()
             result = (-6, str(e))
-        except:
-            raise
-        # else:
-        #     cur.close()
-        #     self.con.commit()
-        #     result = (0, 'Success')
+        except Exception as e:
+            cur.close()
+            self.con.rollback()
+            result = (-7, str(e))
+        else:
+            cur.close()
+            self.con.commit()
+            if result == (-1, 'Unprocessed'):
+                result = (0, 'Success')
         finally:
             return result
 

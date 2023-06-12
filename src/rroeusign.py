@@ -141,7 +141,7 @@ class BaseRequest:
             cherrypy.log(f'Document {self.rrodoc_id} got {ordertaxnum=}','ABHARD')
             receiptstr = start + ticket + stop
             query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_receipt_blob = ?, ordertaxnum = ? where id = ?'
-            r = fbclient.execSQL(query, [self.xmldoc, receiptstr, ordertaxnum, self.rrodoc_id])
+            dbres = fbclient.execSQL(query, [self.xmldoc, receiptstr, ordertaxnum, self.rrodoc_id])
             res['result'] = 'OK'
             res['b64message'] = base64.b64encode(bytes('Відповідь сервера збережено', 'utf-8'))
             res['message'] = 'Відповідь сервера збережено'
@@ -149,7 +149,7 @@ class BaseRequest:
         else:
             cherrypy.log(f'{response.text=}', 'ABHARD')
             query = 'UPDATE rro_docs set doc_xml_blob = ?, doc_status = 2 where id = ?'
-            rrodb = fbclient.execSQL(query, [self.xmldoc,self.rrodoc_id])
+            dbres = fbclient.execSQL(query, [self.xmldoc,self.rrodoc_id])
             res['result'] = 'Error'
             res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
             res['message'] = response.text
@@ -177,6 +177,7 @@ class BaseRequest:
         self.processInput(rroid, cherrypy.request.json)
         self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
         self.rrodoc_id = self.getRrodocID()
+        cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
         self.xmldoc = self.prepareXMLDoc()
         payload = self.euiface.signXMLDoc(self.xmldoc)
         response = self.postData(payload)
@@ -189,6 +190,7 @@ class Shift2(BaseRequest):
     def getRrodocID(self):
         query = 'SELECT id from rro_docs where rro_id = ? and shift_id = ? and doc_type = ? '
         result = fbclient.selectSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type])
+        cherrypy.log(f'Getting rrodoc_id for {self.shift_id=} and {self.doc_type=}', 'ABHARD')
         if len(result) > 0:
             return result[0][0]
         else:
@@ -206,13 +208,15 @@ class Shift2(BaseRequest):
             self.localnum = fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.ukrnow])[0]
             query = 'UPDATE rro_shifts set ordertaxnum_start = ? where id = ?'
             fbclient.execSQL(query, [self.localnum, self.shift_id])
-            cherrypy.log(f'{self.localnum=}', 'ABHARD')
+            cherrypy.log(f'{self.localnum=}, {self.shift_id=}', 'ABHARD')
         else:
             cherrypy.log('Updating existing shift', 'ABHARD')
             query = 'INSERT into rro_docs(rro_id, shift_id, doc_type, doc_timestamp) values(?, ?, ?, ?) returning LOCALNUM'
             self.localnum = fbclient.execSQL(query, [self.dev['rroid'], self.shift_id, self.doc_type, self.ukrnow])[0]
-            cherrypy.log(f'{self.localnum=}', 'ABHARD')
             self.shift_id = res[0][0]
+            query = 'UPDATE rro_shifts set ordertaxnum_end = ?, shift_end = ? where id = ?'
+            fbclient.execSQL(query, [self.localnum, self.ukrnow, self.shift_id])
+            cherrypy.log(f'{self.localnum=}, {self.shift_id=}', 'ABHARD')
         query = 'SELECT OUT FROM RRO_SHIFT(?, ?, ?, ?)'
         rrodb = fbclient.selectSQL(query, [self.shift_id, self.dev['rroid'], self.test_mode, self.doc_type])
         xmlstr=''
@@ -223,13 +227,31 @@ class Shift2(BaseRequest):
 
     def POST(self, rroid):
         ''' Open new shift '''
+        ''' We need it here because in this case rrodoc_id is available only after prepareXMLDoc'''
         self.doc_type = 100
-        return super().POST(rroid)
+        self.processInput(rroid, cherrypy.request.json)
+        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.xmldoc = self.prepareXMLDoc()
+        self.rrodoc_id = self.getRrodocID()
+        cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
+        payload = self.euiface.signXMLDoc(self.xmldoc)
+        response = self.postData(payload)
+        result = self.processResponse(response)
+        return result
 
     def PUT(self, rroid):
         ''' Close current shift '''
+        ''' We need it here because in this case rrodoc_id is available only after prepareXMLDoc'''
         self.doc_type = 101
-        return super().PUT(rroid)
+        self.processInput(rroid, cherrypy.request.json)
+        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.xmldoc = self.prepareXMLDoc()
+        self.rrodoc_id = self.getRrodocID()
+        cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
+        payload = self.euiface.signXMLDoc(self.xmldoc)
+        response = self.postData(payload)
+        result = self.processResponse(response)
+        return result
 
 @cherrypy.expose()
 class ZReport2(BaseRequest):
@@ -252,8 +274,17 @@ class ZReport2(BaseRequest):
         return xmlstr
 
     def POST(self, rroid):
-        ''' Open new shift '''
-        return super().POST(rroid)
+        ''' Print Z-report '''
+        ''' We need it separatele because in this case rrodoc_id is available only after prepareXMLDoc'''
+        self.processInput(rroid, cherrypy.request.json)
+        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.xmldoc = self.prepareXMLDoc()
+        self.rrodoc_id = self.getRrodocID()
+        cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
+        payload = self.euiface.signXMLDoc(self.xmldoc)
+        response = self.postData(payload)
+        result = self.processResponse(response)
+        return result
 
 @cherrypy.expose()
 class Cashinout2(BaseRequest):
@@ -298,6 +329,7 @@ class Receipt2(BaseRequest):
         if len(result) > 0:
             return result[0][0]
         else:
+            cherrypy.log(f'Could not find rrodoc_id for {self.shift_id=} and {self.doc_id=}')
             return None
 
     def prepareXMLDoc(self):
@@ -1190,18 +1222,12 @@ class Command:
 
 @cherrypy.expose()
 class Root:
-    receipt = Receipt()
-    receiptreturn = ReceiptReturn()
-    receiptcancel = ReceiptCancel()
-    cashinout = Cashinout()
-    zreport = ZReport()
-    shift = Shift()
-    receipt2 = Receipt2()
-    receiptreturn2 = ReceiptReturn2()
-    receiptcancel2 = ReceiptCancel2()
-    cashinout2 = Cashinout2()
-    zreport2 = ZReport2()
-    shift2 = Shift2()
+    receipt = Receipt2()
+    receiptreturn = ReceiptReturn2()
+    receiptcancel = ReceiptCancel2()
+    cashinout = Cashinout2()
+    zreport = ZReport2()
+    shift = Shift2()
     cmd = Command()
 
     def GET(self):
