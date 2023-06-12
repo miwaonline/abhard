@@ -27,7 +27,9 @@ curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"$CHECKID", "shif
 curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"$CHECKID", "shift_id":"$SHIFTID", "test_mode": "1" }' localhost:8080/api/rro/eusign/receiptcancel/1
 
 # service cashin/cashout
-curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"123456", "shift_id":"$SHIFTID", "test_mode": "1" }' localhost:8080/api/rro/eusign/cashinout/1
+# insert into rro_docs(RRO_ID,SHIFT_ID,DOC_TYPE,DOC_SUBTYPE,DOC_SUM) values(:rro_id, :shiftid, 0, :subtype, :sum)
+# subtype = 2 for in, 4 for out
+curl -H "Content-Type: application/json" -X POST -d '{"doc_id":"$RRO_DOCS.ID", "shift_id":"$SHIFTID", "test_mode": "1" }' localhost:8080/api/rro/eusign/cashinout/1
 
 # publish a report for shift $SHIFTID from rro id 1 in test mode
 curl -H "Content-Type: application/json" -X POST -d '{"shift_id":"$SHIFTID","test_mode":"1"}' localhost:8080/api/rro/eusign/zreport/1
