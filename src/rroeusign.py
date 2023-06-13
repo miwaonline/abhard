@@ -2,7 +2,6 @@
 import cherrypy
 import fb
 import config
-import xml.etree.ElementTree as ET
 import uuid
 import datetime
 try:
@@ -53,7 +52,8 @@ class EUSign:
         cherrypy.log(f"Crypto library Initialised; certificates are loaded from {dSettings['szPath']}", 'ABHARD')
 
         if 'eusign' in config.full['rro']:
-            dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == '1'), None)
+            #dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == '1'), None)
+            dev = next((item for item in config.full['rro']['eusign']), None)
         else:
             dev = None
         if dev is not None:
