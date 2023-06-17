@@ -4,6 +4,7 @@ import fb
 import config
 import uuid
 import datetime
+import sys
 try:
     import zoneinfo
 except ImportError:
@@ -97,7 +98,6 @@ class BaseRequest:
         self.euiface = EUSign()
 
     def processInput(self, rroid, input_json):
-        # so far there's only one dev so 
         self.dev = next((item for item in config.full['rro']['eusign'] if item['rroid'] == rroid), None)
         if self.dev == None:
             msgstr = f'Помилка конфігурації: немає пристрою з ІД {rroid}'
@@ -164,7 +164,7 @@ class BaseRequest:
 
     def POST(self, rroid):
         self.processInput(rroid, cherrypy.request.json)
-        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.ukrnow = self.getUkrainianNow()
         self.rrodoc_id = self.getRrodocID()
         cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
         self.xmldoc = self.prepareXMLDoc()
@@ -175,7 +175,7 @@ class BaseRequest:
 
     def PUT(self, rroid):
         self.processInput(rroid, cherrypy.request.json)
-        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.ukrnow = self.getUkrainianNow()
         self.rrodoc_id = self.getRrodocID()
         cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
         self.xmldoc = self.prepareXMLDoc()
@@ -230,7 +230,7 @@ class Shift(BaseRequest):
         ''' We need it here because in this case rrodoc_id is available only after prepareXMLDoc'''
         self.doc_type = 100
         self.processInput(rroid, cherrypy.request.json)
-        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.ukrnow = self.getUkrainianNow()
         self.xmldoc = self.prepareXMLDoc()
         self.rrodoc_id = self.getRrodocID()
         cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
@@ -244,7 +244,7 @@ class Shift(BaseRequest):
         ''' We need it here because in this case rrodoc_id is available only after prepareXMLDoc'''
         self.doc_type = 101
         self.processInput(rroid, cherrypy.request.json)
-        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.ukrnow = self.getUkrainianNow()
         self.xmldoc = self.prepareXMLDoc()
         self.rrodoc_id = self.getRrodocID()
         cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
@@ -277,7 +277,7 @@ class ZReport(BaseRequest):
         ''' Print Z-report '''
         ''' We need it separatele because in this case rrodoc_id is available only after prepareXMLDoc'''
         self.processInput(rroid, cherrypy.request.json)
-        self.ukrnow = datetime.datetime.now(zoneinfo.ZoneInfo('Europe/Kyiv'))
+        self.ukrnow = self.getUkrainianNow()
         self.xmldoc = self.prepareXMLDoc()
         self.rrodoc_id = self.getRrodocID()
         cherrypy.log(f'{self.rrodoc_id=}', 'ABHARD')
@@ -494,6 +494,7 @@ class Command:
                 res['message'] = response.text
                 res['status_code'] = response.status_code
                 res['b64message'] = base64.b64encode(bytes(response.text, 'utf-8'))
+                return res
         except BaseException as err:
             cherrypy.log(str(err), 'ABHARD')
             return {
