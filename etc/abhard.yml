@@ -2,7 +2,9 @@ database:
   user: sysdba
   pass: masterkey
   host: 172.18.0.1
-  name: localtest1
+  name: localtest4
+#  host: 172.27.0.13
+#  name: abacus
 webservice:
   port: 8080
 rro:
@@ -11,10 +13,13 @@ rro:
       filename: "/home/miwa/log1.log"
     - name: "file2"
       filename: "/home/miwa/log2.log"
+  eusign_disabled:
+    - name: 'test1'
+      keyfile: '/home/miwa/development/pythons/abhard/keys/en/pb_3191212828.jks'
+      keypass: 'fdsaQ1234'
+      rroid: '1'
   eusign:
     - name: 'test1'
-      keyfile: 'keys/baron/2840916985_2840916985_P220603105631.ZS2'
-      keyfileb: '/home/miwa/development/pythons/abhard/keys/baron/2840916985_2840916985_P220603105631.ZS2'
-      keyfilec: '/home/miwa/development/pythons/abhard/keys/sk/2480001434_2480001434_P230103230826.ZS2'
+      keyfile: 'keys/baron/2840916985_2840916985_P230605163204.ZS2'
       keypass: '2840'
       rroid: '1'

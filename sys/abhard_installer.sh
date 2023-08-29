@@ -111,7 +111,7 @@ _EOF_
     cat << _EOF_ > $abhardunit
 [Unit]
 Description=Abacus hardware adapter
-After=multi-user.target
+After=multi-user.target firebird3.0.service
 
 [Service]
 RestartSec=10

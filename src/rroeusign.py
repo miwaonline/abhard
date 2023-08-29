@@ -17,6 +17,7 @@ import base64 # to bypass issue with Ukrainian messages
 import simplejson as json # otherwise we have decimal encoding errors in win
 import errno # to raise FileNotFound properly
 import os    # to raise FileNotFound properly
+from types import SimpleNamespace # to create response object on the flight 
 
 # Initialise single db connection
 fbclient = fb.fb(config.full['database']['host'],
@@ -88,6 +89,7 @@ class BaseRequest:
         self.docsuburl='/doc'
         self.cmdsuburl='/cmd'        
         self.headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip'}
+        self.timeout = 15
         self.cashier = None
         self.shift_id = None
         self.rrodoc_id = None
@@ -127,8 +129,15 @@ class BaseRequest:
     def postData(self, payload):
         self.headers['Content-Length'] = str(len(payload))
         res = {}
-        response = requests.post(self.baseurl + self.docsuburl, data=gzip.compress(payload), headers=self.headers)
-        return response
+        try:
+            response = requests.post(self.baseurl + self.docsuburl, 
+                data=gzip.compress(payload), 
+                headers=self.headers,
+                timeout=self.timeout)
+        except requests.exceptions.RequestException as e:
+            response = SimpleNamespace(status_code = 504, text = 'Хутін - пуйло.')
+        finally:
+            return response
 
     def processResponse(self, response):
         cherrypy.log(f'{response.status_code=}', 'ABHARD')
@@ -465,7 +474,14 @@ class Command:
             # send JSON and get response            
             headers={'Content-type': 'application/octet-stream', 'Content-Encoding': 'gzip', 'Content-Length': str(len(payload))}
             res = {}
-            response = requests.post(baseurl + cmdsuburl, data=gzip.compress(payload), headers=headers)
+            timeout = 15
+            try:
+                response = requests.post(baseurl + cmdsuburl, 
+                    data=gzip.compress(payload), 
+                    headers=headers, 
+                    timeout=timeout)
+            except requests.exceptions.RequestException as e:
+                response = SimpleNamespace(status_code = 504, text = 'Хутін - пуйло.')
             if response.status_code == 200:
                 if cmdname == 'ZRep':
                     start='<?xml'
