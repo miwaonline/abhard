@@ -4,4 +4,6 @@ keys/
 lib/
 venv/
 .venv/
+.vscode/
+*log
 **/__pycache__/

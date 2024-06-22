@@ -9,6 +9,8 @@ import websockets
 
 
 connected_clients = set()
+# the last 5 chars are '\t\n\r\x0b\x0c', we dont want them in scanned code
+printablenows = string.printable[:-5]
 
 
 async def scanner_callback(data):
@@ -79,12 +81,11 @@ class ScanerThread(threading.Thread):
                                 if c == "\00":
                                     break
                             buf = "".join(
-                                filter(lambda x: x in string.printable, buf)
+                                filter(lambda x: x in printablenows, buf)
                             )
                             if len(buf):
                                 logger.info(f"Got {buf=} from {self.device}")
                                 asyncio.run(self.callback(buf))
-                                self.last_code = buf
                                 buf = ""
                     if not os.path.exists(self.device):
                         logger.warning(f"{self.device} was disconnected")
@@ -97,6 +98,3 @@ class ScanerThread(threading.Thread):
                 else:
                     logger.warning(f"{e} in thread watching {self.device}")
         logger.info(f"Thread watching {self.device} was stopped")
-
-    def last_code(self):
-        return self.buffer

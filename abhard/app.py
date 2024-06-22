@@ -58,7 +58,11 @@ signal.signal(signal.SIGINT, signal_handler)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    context = {
+        "version": "3.0.0.1",
+        "port": config["scaner"][0]["socker_port"],
+    }
+    return render_template("index.html", **context)
 
 
 @app.route("/api/status", methods=["GET"])
@@ -71,10 +75,15 @@ def get_status():
         scaner_id: thread.is_alive()
         for scaner_id, thread in scaner_threads.items()
     }
+    websocket_status = {
+        scaner_id: thread.is_alive()
+        for scaner_id, thread in websocket_threads.items()
+    }
     return jsonify(
         {
             "rro_status": rro_status,
             "scaner_status": scaner_status,
+            "websocket_status": websocket_status,
             "requests_served": app_status["requests_served"],
         }
     )

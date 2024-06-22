@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Example</title>
+    <title>WebSocket PoC {{ version }}</title>
 </head>
 <body>
-    <h1>WebSocket Example</h1>
+    <h1>WebSocket PoC {{ version }}</h1>
     <input type="text" id="message" placeholder="Type a message">
     <button onclick="sendMessage()">Send</button>
     <ul id="messages"></ul>
 
     <script>
-        const ws = new WebSocket('ws://localhost:8765/');
+        const ws = new WebSocket('ws://localhost:{{ port }}/');
 
         ws.onopen = function(event) {
             console.log('WebSocket is open now.');
