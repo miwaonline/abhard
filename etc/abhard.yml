@@ -16,5 +16,8 @@ scaner:
   - name: "scaner0"
     type: "serial"
     device: "/dev/scaner0"
-    id: 3
-    socker_port: 8765
+    socket_port: 8765
+  - name: "scaner1"
+    type: "virtual"
+    socket_port: 8765
+    socket_host: "192.168.1.2"

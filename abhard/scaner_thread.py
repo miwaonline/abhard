@@ -55,9 +55,9 @@ class WebSocketServerThread(threading.Thread):
 
 
 class ScanerThread(threading.Thread):
-    def __init__(self, scaner_id, device):
+    def __init__(self, name, device):
         threading.Thread.__init__(self)
-        self.scaner_id = scaner_id
+        self.name = name
         self.device = device
         self.running = True
         self.callback = scanner_callback
@@ -67,7 +67,7 @@ class ScanerThread(threading.Thread):
             while self.running and not os.path.exists(self.device):
                 time.sleep(0.1)
             if not self.running:
-                logger.info(f"Thread {self.scaner_id} stopped")
+                logger.info(f"Thread {self.name} stopped")
                 exit(0)
             try:
                 with open(self.device, "r") as file:

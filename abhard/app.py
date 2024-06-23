@@ -31,16 +31,17 @@ for rro in config["rro"]:
 
 # Initialize Scaner threads
 for scaner in config["scaner"]:
-    # Initialize Scaner watcher
-    thread = ScanerThread(scaner["id"], scaner["device"])
-    scaner_threads[scaner["id"]] = thread
-    thread.start()
-    logger.info(f"Started Scaner thread {scaner['id']}")
-    # Initialize WebSocket listener
-    wsthread = WebSocketServerThread(port=scaner["socker_port"])
-    websocket_threads[scaner["id"]] = wsthread
-    wsthread.start()
-    logger.info("Started WebSocket server thread")
+    if scaner["type"] == "serial":
+        # Initialize Scaner watcher
+        thread = ScanerThread(scaner["name"], scaner["device"])
+        scaner_threads[scaner["name"]] = thread
+        thread.start()
+        logger.info(f"Started Scaner thread {scaner['name']}")
+        # Initialize WebSocket listener
+        wsthread = WebSocketServerThread(port=scaner["socket_port"])
+        websocket_threads[scaner["name"]] = wsthread
+        wsthread.start()
+        logger.info("Started WebSocket server thread")
 
 
 def signal_handler(sig, frame):
@@ -60,7 +61,7 @@ signal.signal(signal.SIGINT, signal_handler)
 def index():
     context = {
         "version": "3.0.0.1",
-        "port": config["scaner"][0]["socker_port"],
+        "port": config["scaner"][0]["socket_port"],
     }
     return render_template("index.html", **context)
 
@@ -129,6 +130,31 @@ def get_api_list():
         },
     )
     return jsonify(result)
+
+
+@app.route("/api/scaner/<string:scaner_name>/", methods=["GET"])
+def get_scaner(scaner_name):
+    if not isinstance(scaner_name, str):
+        return jsonify(
+            {
+                "result": "error",
+                "message": "Scaner name must be a string",
+                "status_code": 400,
+            }
+        )
+    app_status["requests_served"]["data"] += 1
+    for scaner in config["scaner"]:
+        if scaner["name"] == scaner_name:
+            return jsonify(
+                {
+                    "result": "ok",
+                    "host": scaner.get("socket_host", "127.0.0.1"),
+                    "port": scaner["socket_port"],
+                }
+            )
+    return jsonify(
+        {"result": "error", "message": "Scaner not found", "status_code": 404}
+    )
 
 
 @app.route(
