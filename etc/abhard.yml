@@ -18,6 +18,6 @@ scaner:
     device: "/dev/scaner0"
     socket_port: 8765
   - name: "scaner1"
-    type: "virtual"
+    type: "redirect"
     socket_port: 8765
     socket_host: "192.168.1.2"

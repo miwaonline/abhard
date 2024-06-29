@@ -14,7 +14,7 @@ printablenows = string.printable[:-5]
 
 
 async def scanner_callback(data):
-    logger.info(f"Received {data} from scanner")
+    logger.debug(f"Received {data} from scanner")
     if connected_clients:
         logger.info(f"Sending {data} to clients")
         tasks = [
@@ -45,7 +45,7 @@ class WebSocketServerThread(threading.Thread):
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
         self.server = websockets.serve(
-            websocket_handler, "localhost", self.port
+            websocket_handler, "0.0.0.0", self.port
         )
         self.loop.run_until_complete(self.server)
         self.loop.run_forever()
@@ -84,7 +84,7 @@ class ScanerThread(threading.Thread):
                                 filter(lambda x: x in printablenows, buf)
                             )
                             if len(buf):
-                                logger.info(f"Got {buf=} from {self.device}")
+                                logger.debug(f"Got {buf=} from {self.device}")
                                 asyncio.run(self.callback(buf))
                                 buf = ""
                     if not os.path.exists(self.device):
