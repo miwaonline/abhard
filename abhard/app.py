@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request, render_template
 from sysutils import logger, config
 from rro_eusign import EUSign
-from scaner_thread import ScanerThread, WebSocketServerThread
+from scaner_thread import ScanerThread, TCPSocketThread
 import signal
 import sys
 import base64
@@ -11,7 +11,7 @@ app = Flask("abhard")
 
 rro_objects = {}
 scaner_threads = {}
-websocket_threads = {}
+tcpsocket_threads = {}
 app_status = {
     "requests_served": {
         "cmd": 0,
@@ -27,28 +27,27 @@ for rro in config["rro"]:
     rroobj = EUSign(rro["id"], rro["keyfile"], rro["keypass"])
     rro_objects[rro["id"]] = rroobj
     logger.info(f"Started RRO thread {rro['id']}")
-    # thread.start()
 
 # Initialize Scaner threads
 for scaner in config["scaner"]:
     if scaner["type"] == "serial":
-        # Initialize Scaner watcher
+        logger.info(f"Starting listening thread for {scaner['name']}")
         thread = ScanerThread(scaner["name"], scaner["device"])
         scaner_threads[scaner["name"]] = thread
         thread.start()
-        logger.info(f"Started Scaner thread {scaner['name']}")
-        # Initialize WebSocket listener
-        wsthread = WebSocketServerThread(port=scaner["socket_port"])
-        websocket_threads[scaner["name"]] = wsthread
-        wsthread.start()
-        logger.info("Started WebSocket server thread")
+        logger.info(f"Starting TCP socket thread for {scaner['name']}")
+        tcpthread = TCPSocketThread(
+            scaner["name"], scaner["socket_port"]
+        )
+        tcpsocket_threads[scaner["name"]] = tcpthread
+        tcpthread.start()
 
 
 def signal_handler(sig, frame):
     logger.info("Shutting down gracefully...")
     for thread in scaner_threads.values():
         thread.running = False
-    for thread in websocket_threads.values():
+    for thread in tcpsocket_threads.values():
         thread.stop()
         thread.join()
     sys.exit(0)
@@ -61,7 +60,18 @@ signal.signal(signal.SIGINT, signal_handler)
 def index():
     context = {
         "version": "3.0.0.1",
-        "port": config["scaner"][0]["socket_port"],
+        "requests_served": app_status["requests_served"],
+        "rro_status": {
+            rro_id: euobject.rro_id for rro_id, euobject in rro_objects.items()
+        },
+        "scaner_status": {
+            scaner_id: thread.is_alive()
+            for scaner_id, thread in scaner_threads.items()
+        },
+        "tcpsocket_status": {
+            scaner_id: thread.is_alive()
+            for scaner_id, thread in tcpsocket_threads.items()
+        },
     }
     return render_template("index.html", **context)
 
@@ -76,15 +86,15 @@ def get_status():
         scaner_id: thread.is_alive()
         for scaner_id, thread in scaner_threads.items()
     }
-    websocket_status = {
+    tcpsocket_status = {
         scaner_id: thread.is_alive()
-        for scaner_id, thread in websocket_threads.items()
+        for scaner_id, thread in tcpsocket_threads.items()
     }
     return jsonify(
         {
             "rro_status": rro_status,
             "scaner_status": scaner_status,
-            "websocket_status": websocket_status,
+            "tcpsocket_status": tcpsocket_status,
             "requests_served": app_status["requests_served"],
         }
     )

@@ -1,38 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket PoC {{ version }}</title>
+<title>Status page for Abhard {{ version }}</title>
 </head>
 <body>
-    <h1>WebSocket PoC {{ version }}</h1>
-    <input type="text" id="message" placeholder="Type a message">
-    <button onclick="sendMessage()">Send</button>
-    <ul id="messages"></ul>
-
-    <script>
-        const ws = new WebSocket('ws://localhost:{{ port }}/');
-
-        ws.onopen = function(event) {
-            console.log('WebSocket is open now.');
-        };
-
-        ws.onmessage = function(event) {
-            const messages = document.getElementById('messages');
-            const message = document.createElement('li');
-            message.textContent = event.data;
-            messages.appendChild(message);
-        };
-
-        ws.onclose = function(event) {
-            console.log('WebSocket is closed now.');
-        };
-
-        function sendMessage() {
-            const input = document.getElementById('message');
-            ws.send(input.value);
-            input.value = '';
-        }
-    </script>
+<h1>Status page for Abhard {{ version }}</h1>
+<p>Requests served: {{ requests_served }}</p>
+<p>RRO status: {{ rro_status }}</p>
+<p>Scaner status: {{ scaner_status }}</p>
+<p>TCP socket status: {{ tcpsocket_status }}</p>
 </body>
 </html>
 
