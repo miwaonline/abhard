@@ -21,26 +21,25 @@ app_status = {
     }
 }
 
-
 # Initialize RRO objects
 for rro in config["rro"]:
     rroobj = EUSign(rro["id"], rro["keyfile"], rro["keypass"])
     rro_objects[rro["id"]] = rroobj
-    logger.info(f"Started RRO thread {rro['id']}")
+    logger.info(f"Initialized RRO {rro['id']}")
 
 # Initialize Scaner threads
 for scaner in config["scaner"]:
     if scaner["type"] == "serial":
-        logger.info(f"Starting listening thread for {scaner['name']}")
-        thread = ScanerThread(scaner["name"], scaner["device"])
-        scaner_threads[scaner["name"]] = thread
-        thread.start()
         logger.info(f"Starting TCP socket thread for {scaner['name']}")
         tcpthread = TCPSocketThread(
             scaner["name"], scaner["socket_port"]
         )
         tcpsocket_threads[scaner["name"]] = tcpthread
         tcpthread.start()
+        logger.info(f"Starting listening thread for {scaner['name']}")
+        thread = ScanerThread(scaner["name"], scaner["device"], tcpthread)
+        scaner_threads[scaner["name"]] = thread
+        thread.start()
 
 
 def signal_handler(sig, frame):

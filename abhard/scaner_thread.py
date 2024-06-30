@@ -7,20 +7,14 @@ import string
 import socket
 
 
-connected_clients = set()
 # the last 5 chars are '\t\n\r\x0b\x0c', we dont want them in scanned code
 printablenows = string.printable[:-5]
 
 
-async def scanner_callback(data):
-    logger.debug(f"Received {data} from scanner")
-    if connected_clients:
-        logger.info(f"Sending {data} to clients")
-        for client in connected_clients:
-            client.send(data.encode())
-
-
 class TCPSocketThread(threading.Thread):
+    connected_clients = set()
+    clients_lock = threading.Lock()
+
     def __init__(self, name, port):
         super().__init__()
         self.name = name
@@ -37,7 +31,8 @@ class TCPSocketThread(threading.Thread):
         while self.running:
             try:
                 client_socket, addr = self.server_socket.accept()
-                connected_clients.add(client_socket)
+                with self.clients_lock:
+                    self.connected_clients.add(client_socket)
                 logger.info(f"Client connected: {addr}")
                 threading.Thread(
                     target=self.client_handler, args=(client_socket,)
@@ -57,8 +52,11 @@ class TCPSocketThread(threading.Thread):
                 client_socket.sendall(f"Echo: {data.decode()}".encode())
         except OSError:
             pass
+        except UnicodeDecodeError:
+            pass
         finally:
-            connected_clients.remove(client_socket)
+            with self.clients_lock:
+                self.connected_clients.remove(client_socket)
             client_socket.close()
             logger.info("Client disconnected")
 
@@ -67,14 +65,24 @@ class TCPSocketThread(threading.Thread):
         self.server_socket.close()
         logger.info(f"TCP socket {self.name} stopped")
 
+    def broadcast_message(self, message):
+        with self.clients_lock:
+            for client in list(self.connected_clients):
+                try:
+                    client.send(message.encode())
+                except OSError:
+                    with self.clients_lock:
+                        self.connected_clients.remove(client)
+                    client.close()
+
 
 class ScanerThread(threading.Thread):
-    def __init__(self, name, device):
+    def __init__(self, name, device, tcpthread):
         threading.Thread.__init__(self)
         self.name = name
         self.device = device
         self.running = True
-        self.callback = scanner_callback
+        self.tcpthread = tcpthread
 
     def run(self):
         while self.running:
@@ -99,7 +107,7 @@ class ScanerThread(threading.Thread):
                             )
                             if len(buf):
                                 logger.debug(f"Got {buf=} from {self.device}")
-                                self.callback(buf)
+                                self.tcpthread.broadcast_message(f"{buf}\r\n")
                                 buf = ""
                     if not os.path.exists(self.device):
                         logger.warning(f"{self.device} was disconnected")
