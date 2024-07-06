@@ -6,7 +6,6 @@ from sysutils import logger
 import string
 import socket
 
-
 # the last 5 chars are '\t\n\r\x0b\x0c', we dont want them in scanned code
 printablenows = string.printable[:-5]
 
@@ -14,6 +13,7 @@ printablenows = string.printable[:-5]
 class TCPSocketThread(threading.Thread):
     connected_clients = set()
     clients_lock = threading.Lock()
+    active_client = None
 
     def __init__(self, name, port):
         super().__init__()
@@ -48,8 +48,14 @@ class TCPSocketThread(threading.Thread):
                 data = client_socket.recv(1024)
                 if not data:
                     break
-                logger.info(f"Received message: {data.decode()}")
-                client_socket.sendall(f"Echo: {data.decode()}".encode())
+                message = data.decode().strip()
+                logger.info(f"Received message: {message}")
+                if message.strip() == "act":
+                    with self.clients_lock:
+                        self.active_client = client_socket
+                    self.unicast_message("ack")
+                else:
+                    client_socket.sendall(f"Echo: {message}\r\n".encode())
         except OSError:
             pass
         except UnicodeDecodeError:
@@ -57,6 +63,8 @@ class TCPSocketThread(threading.Thread):
         finally:
             with self.clients_lock:
                 self.connected_clients.remove(client_socket)
+                if self.active_client == client_socket:
+                    self.active_client = None
             client_socket.close()
             logger.info("Client disconnected")
 
@@ -65,15 +73,18 @@ class TCPSocketThread(threading.Thread):
         self.server_socket.close()
         logger.info(f"TCP socket {self.name} stopped")
 
-    def broadcast_message(self, message):
+    def unicast_message(self, message):
         with self.clients_lock:
-            for client in list(self.connected_clients):
+            if self.active_client in self.connected_clients:
                 try:
-                    client.send(message.encode())
+                    self.active_client.send((message + "\r\n").encode())
+                    logger.info(f"Sent message {message} to active client.")
                 except OSError:
-                    with self.clients_lock:
-                        self.connected_clients.remove(client)
-                    client.close()
+                    self.connected_clients.remove(self.active_client)
+                    self.active_client.close()
+                    self.active_client = None
+            else:
+                logger.info(f"No active client to send {message} to.")
 
 
 class ScanerThread(threading.Thread):
@@ -107,7 +118,7 @@ class ScanerThread(threading.Thread):
                             )
                             if len(buf):
                                 logger.debug(f"Got {buf=} from {self.device}")
-                                self.tcpthread.broadcast_message(f"{buf}\r\n")
+                                self.tcpthread.unicast_message(f"{buf}")
                                 buf = ""
                     if not os.path.exists(self.device):
                         logger.warning(f"{self.device} was disconnected")
