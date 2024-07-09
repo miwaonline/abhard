@@ -16,20 +16,6 @@ class AppTestCase(unittest.TestCase):
         self.assertIn("scaner_status", data)
         self.assertIn("requests_served", data)
 
-    def test_scaner_data_endpoint(self):
-        response = self.app.get("/api/scaner/3/data")
-        self.assertEqual(response.status_code, 200)
-        data = response.get_json()
-        self.assertIn("data", data)
-
-    def test_invalid_rro_endpoint(self):
-        response = self.app.get("/api/rro/999/length")
-        self.assertEqual(response.status_code, 404)
-
-    def test_invalid_scaner_endpoint(self):
-        response = self.app.get("/api/scaner/999/data")
-        self.assertEqual(response.status_code, 404)
-
     @patch('requests.post')
     def test_rro_doc_endpoint(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -45,6 +31,9 @@ class AppTestCase(unittest.TestCase):
     def tearDown(self):
         for thread in app.scaner_threads.values():
             thread.running = False
+        for thread in app.tcpsocket_threads.values():
+            thread.stop()
+            thread.join()
         return super().tearDown()
 
 

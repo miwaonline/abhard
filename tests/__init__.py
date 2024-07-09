@@ -1,2 +1,5 @@
 import sys
-sys.path.append('/home/miwa/development/pythons/abhard4/abhard')
+import pathlib
+abpath = pathlib.Path(__file__).parent.resolve().parent / 'abhard'
+abpath = str(abpath)
+sys.path.append(abpath)
