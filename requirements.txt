@@ -1,8 +1,6 @@
 Flask
 black
-fdb
 pyyaml
 simplejson
-parameterized
 coverage
 requests

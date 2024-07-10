@@ -38,7 +38,7 @@ Build-Depends: debhelper (>= 11)
 
 Package: abhard
 Architecture: any
-Depends: \${shlibs:Depends}, \${misc:Depends}, python3-simplejson, python3-flask, systemd
+Depends: \${shlibs:Depends}, \${misc:Depends}, python3-simplejson, python3-flask, systemd, python3-yaml, python3-requests
 Description: Abhard package
  This package installs Abhard software." > debian/control
 
