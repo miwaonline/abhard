@@ -9,6 +9,7 @@ from http_utils import post_command, post_document
 
 app = Flask("abhard")
 
+version = "3.0.0.2"
 rro_objects = {}
 scaner_threads = {}
 tcpsocket_threads = {}
@@ -58,7 +59,7 @@ signal.signal(signal.SIGINT, signal_handler)
 @app.route("/")
 def index():
     context = {
-        "version": "3.0.0.1",
+        "version": version,
         "requests_served": app_status["requests_served"],
         "rro_status": {
             rro_id: euobject.rro_id for rro_id, euobject in rro_objects.items()
@@ -95,6 +96,7 @@ def get_status():
             "scaner_status": scaner_status,
             "tcpsocket_status": tcpsocket_status,
             "requests_served": app_status["requests_served"],
+            "version": version,
         }
     )
 
@@ -118,18 +120,23 @@ def get_api_list():
             "type": "get",
         },
         {
-            "url": "api/rro/cmd/{id}/Check/{fn}/{docid}",
+            "url": "api/rro/cmd/{id}/Check/{fn}/{docid}/",
             "name": "Check",
             "type": "get",
         },
         {
-            "url": "api/rro/cmd/{id}/Documents/{fn}/{docid}",
+            "url": "api/rro/cmd/{id}/Documents/{fn}/{docid}/",
             "name": "Documents",
             "type": "get",
         },
         {
-            "url": "api/rro/cmd/{id}/ZRep/{fn}/{docid}",
+            "url": "api/rro/cmd/{id}/ZRep/{fn}/{docid}/",
             "name": "ZReport",
+            "type": "get",
+        },
+        {
+            "url": "api/status/",
+            "name": "Status",
             "type": "get",
         },
         {
