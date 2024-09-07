@@ -104,9 +104,7 @@ def gen_ok_response(text, status_code):
     return {
         "result": "OK",
         "message": receiptstr,
-        "b64message": str(
-            base64.b64encode(bytes(receiptstr, "utf-8")).decode("utf-8")
-        ),
+        "b64message": str(base64.b64encode(bytes(receiptstr, "utf-8"))),
         "ordertaxnum": otnum,
     }, status_code
 

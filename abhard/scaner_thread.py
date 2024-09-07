@@ -55,7 +55,9 @@ class TCPSocketThread(threading.Thread):
                         self.active_client = client_socket
                     self.unicast_message("ack")
                 else:
-                    client_socket.sendall(f"Echo: {message}\r\n".encode())
+                    pass
+                    # This line confuses current client implementation
+                    # client_socket.sendall(f"Echo: {message}\r\n".encode())
         except OSError:
             pass
         except UnicodeDecodeError:
