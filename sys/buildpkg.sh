@@ -24,7 +24,7 @@ User=nobody
 Group=nogroup
 Environment=PYTHONUNBUFFERED=1
 Environment=LD_LIBRARY_PATH=/opt/abhard/lib
-WorkingDirectory=/opt/abhard3
+WorkingDirectory=/opt/abhard
 RestartSec=10
 Restart=on-failure
 
