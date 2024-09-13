@@ -8,6 +8,7 @@ import socket
 
 # the last 5 chars are '\t\n\r\x0b\x0c', we dont want them in scanned code
 printablenows = string.printable[:-5]
+separators = "\t\n\r\x0b\x0c\00"
 
 
 class TCPSocketThread(threading.Thread):
@@ -113,7 +114,7 @@ class ScanerThread(threading.Thread):
                         if file in ready:
                             while c := file.read(1):
                                 buf += c
-                                if c == "\00":
+                                if c in separators:
                                     break
                             buf = "".join(
                                 filter(lambda x: x in printablenows, buf)
