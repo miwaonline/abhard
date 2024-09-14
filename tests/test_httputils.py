@@ -1,6 +1,5 @@
 import unittest
 from datetime import datetime, timedelta
-import base64
 from unittest.mock import patch
 from abhard.http_utils import prepare_json, gen_err_response, gen_ok_response
 
@@ -105,7 +104,6 @@ class TestGenResponses(unittest.TestCase):
                     "result": "Error",
                     "message": text,
                     "status_code": status_code,
-                    "b64message": str(base64.b64encode(bytes(text, "utf-8"))),
                 }
                 result, code = gen_err_response(text, status_code)
                 self.assertEqual(result["result"], "Error")
@@ -124,7 +122,6 @@ class TestGenResponses(unittest.TestCase):
             "result": "Error",
             "message": "",
             "status_code": status_code,
-            "b64message": "",
         }
         expected_status_code = status_code
         result, status_code = gen_err_response(text, status_code)
@@ -139,7 +136,6 @@ class TestGenResponses(unittest.TestCase):
             "result": "Error",
             "message": text,
             "status_code": -1,
-            "b64message": str(base64.b64encode(bytes(text, "utf-8"))),
         }
         expected_status_code = -1
         result, status_code = gen_err_response(text, status_code)

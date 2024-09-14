@@ -4,7 +4,6 @@ from requests import Session
 from requests.adapters import HTTPAdapter
 import datetime
 import gzip
-import base64
 import json
 from sysutils import logger, config
 import string
@@ -65,16 +64,11 @@ def prepare_json(cmdname, regfiscalnum, docfiscalnum):
 
 def gen_err_response(text, status_code):
     logger.warning(f"Помилка {status_code}. {text=}")
-    if isinstance(text, str):
-        b64 = str(base64.b64encode(bytes(text, "utf-8")))
-    else:
-        b64 = ""
     return (
         {
             "result": "Error",
             "message": text or "",
             "status_code": status_code,
-            "b64message": b64,
         },
         status_code,
     )
@@ -104,7 +98,6 @@ def gen_ok_response(text, status_code):
     return {
         "result": "OK",
         "message": receiptstr,
-        "b64message": str(base64.b64encode(bytes(receiptstr, "utf-8"))),
         "ordertaxnum": otnum,
     }, status_code
 

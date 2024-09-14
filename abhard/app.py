@@ -9,7 +9,7 @@ from http_utils import post_command, post_document
 
 app = Flask("abhard")
 
-version = "3.0.0.5"
+version = "3.0.0.6"
 rro_objects = {}
 scaner_threads = {}
 tcpsocket_threads = {}
@@ -200,9 +200,6 @@ def rro_cmd(rro_id, cmdname, regfiscalnum, docfiscalnum):
                     "result": "error",
                     "message": "ПРРО не знайдено",
                     "status_code": 404,
-                    "b64message": str(
-                        base64.b64encode(bytes("ПРРО не знайдено", "utf-8"))
-                    ),
                 }
             ),
             404,
@@ -225,9 +222,6 @@ def rro_doc(rro_id):
                     "result": "error",
                     "message": "ПРРО не знайдено",
                     "status_code": 404,
-                    "b64message": str(
-                        base64.b64encode(bytes("ПРРО не знайдено", "utf-8"))
-                    ),
                 }
             ),
             404,
@@ -239,9 +233,6 @@ def rro_doc(rro_id):
                     "result": "error",
                     "message": "XML не передано",
                     "status_code": 400,
-                    "b64message": str(
-                        base64.b64encode(bytes("XML не передано", "utf-8"))
-                    ),
                 }
             ),
             400,
