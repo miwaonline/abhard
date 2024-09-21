@@ -1,4 +1,4 @@
-from sysutils import logger
+from sysutils import prro_logger
 import pathlib
 import EUSignCP
 import errno
@@ -17,7 +17,7 @@ class EUSign:
             EUSign.pIface = EUSignCP.EUGetInterface()
             EUSign.pIface.Initialize()
         except Exception:
-            logger.warning("EUSignCP initialisation failed.")
+            prro_logger.warning("EUSignCP initialisation failed.")
             EUSignCP.EUUnload()
             exit(1)
         dSettings = {}
@@ -25,19 +25,19 @@ class EUSign:
         path = pathlib.Path(__file__).parent.absolute().parent
         dSettings["szPath"] = f"{path}/cert"
         if len(dSettings["szPath"]) == 0:
-            logger.info("Crypto settings initialisation failed.")
+            prro_logger.info("Crypto settings initialisation failed.")
             EUSign.pIface.Finalize()
             EUSignCP.EUUnload()
             exit(2)
         EUSign.pIface.SetFileStoreSettings(dSettings)
-        logger.info(
+        prro_logger.info(
             "Crypto library Initialised; certificates are loaded "
             f"from {dSettings['szPath']}"
         )
 
     def init_certificate(self, keyfile, password):
         try:
-            logger.info(f'Reading {keyfile}')
+            prro_logger.info(f'Reading {keyfile}')
             if not pathlib.Path(keyfile).is_file():
                 raise FileNotFoundError(
                     errno.ENOENT, os.strerror(errno.ENOENT), keyfile
@@ -47,9 +47,9 @@ class EUSign:
                 EUSign.pIface.ReadPrivateKeyFile(
                     keyfile, password, ownerinfo
                 )
-                logger.info("Certificate loaded successfully")
+                prro_logger.info("Certificate loaded successfully")
         except Exception as e:
-            logger.info("Certificate reading failed: " + str(e))
+            prro_logger.info("Certificate reading failed: " + str(e))
             EUSign.pIface.Finalize()
             EUSignCP.EUUnload()
             raise

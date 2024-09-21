@@ -2,7 +2,7 @@ import threading
 import os
 import select
 import time
-from sysutils import logger
+from sysutils import main_logger, scan_logger
 import string
 import socket
 
@@ -27,14 +27,14 @@ class TCPSocketThread(threading.Thread):
         self.running = True
 
     def run(self):
-        logger.info(f"Starting TCP server on {self.host}:{self.port}")
+        scan_logger.info(f"Starting TCP server on {self.host}:{self.port}")
         self.server_socket.settimeout(0.5)
         while self.running:
             try:
                 client_socket, addr = self.server_socket.accept()
                 with self.clients_lock:
                     self.connected_clients.add(client_socket)
-                logger.info(f"Client connected: {addr}")
+                scan_logger.info(f"Client connected: {addr}")
                 threading.Thread(
                     target=self.client_handler, args=(client_socket,)
                 ).start()
@@ -50,7 +50,7 @@ class TCPSocketThread(threading.Thread):
                 if not data:
                     break
                 message = data.decode().strip()
-                logger.info(f"Received message: {message}")
+                scan_logger.info(f"Received message: {message}")
                 if message.strip() == "act":
                     with self.clients_lock:
                         self.active_client = client_socket
@@ -69,25 +69,30 @@ class TCPSocketThread(threading.Thread):
                 if self.active_client == client_socket:
                     self.active_client = None
             client_socket.close()
-            logger.info("Client disconnected")
+            scan_logger.info("Client disconnected")
 
     def stop(self):
         self.running = False
         self.server_socket.close()
-        logger.info(f"TCP socket {self.name} stopped")
+        main_logger.info(f"TCP socket {self.name} stopped")
 
     def unicast_message(self, message):
         with self.clients_lock:
             if self.active_client in self.connected_clients:
                 try:
                     self.active_client.send((message + "\r\n").encode())
-                    logger.info(f"Sent message {message} to active client.")
+                    scan_logger.info(
+                        f"Sent message {message} to active client."
+                    )
                 except OSError:
                     self.connected_clients.remove(self.active_client)
                     self.active_client.close()
                     self.active_client = None
+                    scan_logger.info(
+                        f"Active client disconnected. Message {message} lost."
+                    )
             else:
-                logger.info(f"No active client to send {message} to.")
+                scan_logger.info(f"No active client to send {message} to.")
 
 
 class ScanerThread(threading.Thread):
@@ -103,11 +108,11 @@ class ScanerThread(threading.Thread):
             while self.running and not os.path.exists(self.device):
                 time.sleep(0.1)
             if not self.running:
-                logger.info(f"Thread {self.name} stopped")
+                main_logger.info(f"Thread {self.name} stopped")
                 exit(0)
             try:
                 with open(self.device, "r") as file:
-                    logger.info(f"Started {self.device} watching")
+                    scan_logger.info(f"Started {self.device} watching")
                     buf = ""
                     while self.running:
                         ready, _, _ = select.select([file], [], [], 0.1)
@@ -120,11 +125,13 @@ class ScanerThread(threading.Thread):
                                 filter(lambda x: x in printablenows, buf)
                             )
                             if len(buf):
-                                logger.debug(f"Got {buf=} from {self.device}")
+                                scan_logger.debug(
+                                    f"Got {buf=} from {self.device}"
+                                )
                                 self.tcpthread.unicast_message(f"{buf}")
                                 buf = ""
                     if not os.path.exists(self.device):
-                        logger.warning(f"{self.device} was disconnected")
+                        scan_logger.warning(f"{self.device} was disconnected")
                         break
             except (KeyboardInterrupt, SystemExit, Exception) as e:
                 if isinstance(e, KeyboardInterrupt):
@@ -132,5 +139,7 @@ class ScanerThread(threading.Thread):
                 elif isinstance(e, SystemExit):
                     self.running = False
                 else:
-                    logger.warning(f"{e} in thread watching {self.device}")
-        logger.info(f"Thread watching {self.device} was stopped")
+                    scan_logger.warning(
+                        f"{e} in thread watching {self.device}"
+                    )
+        main_logger.info(f"Thread watching {self.device} was stopped")

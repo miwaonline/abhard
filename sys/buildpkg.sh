@@ -51,7 +51,8 @@ opt/abhard/etc
 opt/abhard/cert
 opt/abhard/keys
 opt/abhard/templates
-usr/lib/systemd/system" > debian/dirs
+usr/lib/systemd/system
+var/log/abhard" > debian/dirs
 
 echo "opt/abhard/abhard/* opt/abhard/abhard/
 opt/abhard/etc/* opt/abhard/etc/

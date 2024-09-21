@@ -5,7 +5,7 @@ from requests.adapters import HTTPAdapter
 import datetime
 import gzip
 import json
-from sysutils import logger, config
+from sysutils import main_logger, config
 import string
 
 
@@ -63,7 +63,7 @@ def prepare_json(cmdname, regfiscalnum, docfiscalnum):
 
 
 def gen_err_response(text, status_code):
-    logger.warning(f"Помилка {status_code}. {text=}")
+    main_logger.warning(f"Помилка {status_code}. {text=}")
     return (
         {
             "result": "Error",
@@ -89,7 +89,7 @@ def gen_ok_response(text, status_code):
         ticket = plaintext.split(start)[1].split(stop)[0]
         if "<ORDERTAXNUM" in ticket:
             otnum = ticket.split("<ORDERTAXNUM>")[1].split("</ORDERTAXNUM>")[0]
-            logger.info(f"Received document {otnum=}")
+            main_logger.info(f"Received document {otnum=}")
         else:
             otnum = None
     except Exception as e:
@@ -135,20 +135,20 @@ def post_raw_data(rroobj, endpoint, rawData):
                 config["http"]["total_timeout"],
             ),
         )
-        logger.info(f"Response code: {response.status_code}.")
+        main_logger.info(f"Response code: {response.status_code}.")
         if response.status_code == 200:
             if "application/json" in response.headers.get("Content-Type", ""):
                 return response.json(), response.status_code
             else:
                 return gen_ok_response(response.text, response.status_code)
         else:
-            logger.warning(response.text)
+            main_logger.warning(response.text)
             return gen_err_response(response.text, response.status_code)
     except requests.exceptions.Timeout:
-        logger.warning("Timeout.")
+        main_logger.warning("Timeout.")
         return gen_err_response("Хутін - пуйло!", 504)
     except requests.exceptions.RequestException as e:
-        logger.warning("Request exception:" + str(e))
+        main_logger.warning("Request exception:" + str(e))
         return gen_err_response(str(e), 500)
 
 

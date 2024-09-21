@@ -5,7 +5,7 @@ http:
   connect_timeout: 5
   total_timeout: 20
 log:
-  filename: "abhard.log"
+  path: "/var/log/abhard/"
 rro:
   - name: 'Nelia'
     type: 'eusign'

@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request, render_template
-from sysutils import logger, config
+from sysutils import main_logger, config
 from rro_eusign import EUSign
 from scaner_thread import ScanerThread, TCPSocketThread
 import signal
@@ -9,7 +9,7 @@ from http_utils import post_command, post_document
 
 app = Flask("abhard")
 
-version = "3.0.0.6"
+version = "3.0.0.7"
 rro_objects = {}
 scaner_threads = {}
 tcpsocket_threads = {}
@@ -26,25 +26,25 @@ app_status = {
 for rro in config["rro"]:
     rroobj = EUSign(rro["id"], rro["keyfile"], rro["keypass"])
     rro_objects[rro["id"]] = rroobj
-    logger.info(f"Initialized RRO {rro['id']}")
+    main_logger.info(f"Initialized RRO {rro['id']}")
 
 # Initialize Scaner threads
 for scaner in config["scaner"]:
     if scaner["type"] == "serial":
-        logger.info(f"Starting TCP socket thread for {scaner['name']}")
+        main_logger.info(f"Starting TCP socket thread for {scaner['name']}")
         tcpthread = TCPSocketThread(
             scaner["name"], scaner["socket_port"]
         )
         tcpsocket_threads[scaner["name"]] = tcpthread
         tcpthread.start()
-        logger.info(f"Starting listening thread for {scaner['name']}")
+        main_logger.info(f"Starting listening thread for {scaner['name']}")
         thread = ScanerThread(scaner["name"], scaner["device"], tcpthread)
         scaner_threads[scaner["name"]] = thread
         thread.start()
 
 
 def signal_handler(sig, frame):
-    logger.info("Shutting down gracefully...")
+    main_logger.info("Shutting down gracefully...")
     for thread in scaner_threads.values():
         thread.running = False
     for thread in tcpsocket_threads.values():
@@ -239,7 +239,7 @@ def rro_doc(rro_id):
         )
     xmlcontent = base64.b64decode(request.json["xmlcontent"]).decode("utf-8")
     ordernum = xmlcontent.split("<ORDERNUM>")[1].split("</ORDERNUM>")[0]
-    logger.info(f"Posting document {ordernum}")
+    main_logger.info(f"Posting document {ordernum}")
     res, status = post_document(rroobj, xmlcontent)
     return jsonify(res), status
 
