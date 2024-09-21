@@ -1,0 +1,32 @@
+webservice:
+  port: 8080  # the main port for the app
+http:  # http client config
+  max_retries: 3
+  connect_timeout: 5
+  total_timeout: 20
+  # We can optionally provide proxy server:
+  # proxies:
+  #   http: http://127.0.0.1:8080
+  #   https: http://127.0.0.1:8080
+  # A SOCKS5 proxy config example that additionally skips some domains:
+  # proxies:
+  #   http: socks5://127.0.0.1:8080
+  #   https: socks5://127.0.0.1:8080
+  #   no_proxy: 'localhost,127.0.0.1'
+log:
+  path: "/var/log/abhard/"
+rro:
+  - name: 'prro1'
+    type: 'eusign'
+    keyfile: 'keys/pb_0123456789.jks'
+    keypass: 'supersecret'
+    id: 1
+scaner:
+  - name: "scaner0"
+    type: "serial"
+    device: "/dev/scaner0"
+    socket_port: 8765
+  - name: "scaner1"
+    type: "redirect"
+    socket_port: 8765
+    socket_host: "192.168.1.2"

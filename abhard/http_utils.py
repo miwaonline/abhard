@@ -124,6 +124,9 @@ def post_raw_data(rroobj, endpoint, rawData):
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session.mount("http://", adapter)
     session.mount("https://", adapter)
+    proxies = config['http'].get('proxies')
+    if proxies:
+        session.proxies.update(proxies)
     external_api_url = f"http://fs.tax.gov.ua:8609/fs{endpoint}"
     try:
         response = session.post(

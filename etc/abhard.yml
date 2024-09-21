@@ -4,6 +4,9 @@ http:
   max_retries: 3
   connect_timeout: 5
   total_timeout: 20
+  proxies:
+    http: socks5://127.0.0.1:8088
+    https: socks5://127.0.0.1:8088
 log:
   path: "/var/log/abhard/"
 rro:

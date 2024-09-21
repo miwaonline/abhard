@@ -9,7 +9,7 @@ mkdir -p usr/lib/systemd/system
 cp ../abhard/*py opt/abhard/abhard/
 cp ../abhard/_EUSignCP.so opt/abhard/abhard/
 cp ../cert/* opt/abhard/cert/
-cp ../etc/* opt/abhard/etc/
+cp ../etc/abhard.yml.example opt/abhard/etc/
 cp ../templates/* opt/abhard/templates/
 cp ../lib/* usr/lib/
 
