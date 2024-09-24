@@ -9,7 +9,7 @@ from http_utils import post_command, post_document
 
 app = Flask("abhard")
 
-version = "3.0.0.8"
+version = "3.0.0.9"
 rro_objects = {}
 scaner_threads = {}
 tcpsocket_threads = {}

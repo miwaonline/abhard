@@ -133,13 +133,12 @@ class ScanerThread(threading.Thread):
                     if not os.path.exists(self.device):
                         scan_logger.warning(f"{self.device} was disconnected")
                         break
-            except (KeyboardInterrupt, SystemExit, Exception) as e:
-                if isinstance(e, KeyboardInterrupt):
-                    self.running = False
-                elif isinstance(e, SystemExit):
-                    self.running = False
-                else:
-                    scan_logger.warning(
-                        f"{e} in thread watching {self.device}"
-                    )
+            except KeyboardInterrupt:
+                self.running = False
+            except SystemExit:
+                self.running = False
+            except OSError as e:
+                scan_logger.warning(f"OSError {e} in {self.device} thread.")
+            except Exception as e:
+                scan_logger.warning(f"{e} in thread watching {self.device}")
         main_logger.info(f"Thread watching {self.device} was stopped")
