@@ -30,3 +30,13 @@ scaner:
     type: "redirect"
     socket_port: 8765
     socket_host: "192.168.1.2"
+printer:
+  - name: "printer0"
+    type: "device"
+    device: "/dev/printer0"
+  - name: "printer1"
+    type: "textfile"
+    file: "/var/log/abhard/printer1.log"
+  - name: "printer2"
+    type: "system"
+    device: "System Printer"
