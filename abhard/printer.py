@@ -1,30 +1,54 @@
-from sysutils import config, prnt_logger
-import json
+from sysutils import prnt_logger
 from escpos import printer
-from pathlib import Path
 
 
-def print_document(printer_name, doc):
-    return print_dummy(doc)
-    for printer in config["printer"]:
-        if printer["name"] == printer_name and printer["type"] == "textfile":
-            result = print_textfile(
-                doc,
-                Path(printer["path"] / "doc.json"),
-                printer.get("width", 40),
-            )
-            prnt_logger.info(f"Printed document to {printer_name}")
-    return result
+def configure_printer(printercfg):
+    dummy = False
+    if printercfg["type"].lower() == "usb":
+        p = printer.Usb(
+            idProduct=printercfg["product_id"],
+            idVendor=printercfg["vendor_id"],
+        )
+        prnt_logger.info("Configured USB printer")
+    elif printercfg["type"].lower() == "serial":
+        p = printer.Serial(
+            devfile=printercfg["device"],
+        )
+        prnt_logger.info("Configured serial printer")
+    elif printercfg["type"].lower() == "file":
+        p = printer.File(
+            filename=printercfg["device"],
+        )
+        prnt_logger.info("Configured file printer")
+    elif printercfg["type"].lower() == "network":
+        p = printer.Network(
+            host=printercfg["host"],
+            port=printercfg["port"],
+        )
+        prnt_logger.info("Configured network printer")
+    elif printercfg["type"].lower() == "cups":
+        p = printer.CupsPrinter(
+            name=printercfg["name"],
+        )
+        prnt_logger.info("Configured CUPS printer")
+    elif printercfg["type"].lower() == "windows":
+        p = printer.Win32Raw(
+            name=printercfg["name"],
+        )
+        prnt_logger.info("Configured Windows printer")
+    elif printercfg["type"].lower() == "dummy":
+        p = printer.Dummy()
+        dummy = True
+        prnt_logger.info("Configured dummy printer")
+    else:
+        p = printer.Dummy()
+        dummy = True
+        prnt_logger.info("Configured dummy printer")
+    return p, dummy
 
 
-def print_textfile(doc, filename, width):
-    with open(filename, "w") as f:
-        f.write(json.dumps(doc, indent=4))
-    return 'OK'
-
-
-def print_dummy(doc):
-    p = printer.Dummy()
+def print_document(printercfg, doc):
+    p, dummy = configure_printer(printercfg)
     p.open()
     p.set(align="center", bold=True)
     p.text(doc["header"]["title"] + "\n")
@@ -35,6 +59,6 @@ def print_dummy(doc):
     p.set(align="right", bold=True)
     p.text(doc["footer"] + "\n")
     p.cut()
-    with open("dummy.txt", "w") as f:
-        f.write(str(p.output))
-    return "OK"
+    if not dummy:
+        p.close()
+    return {"result": "OK"}

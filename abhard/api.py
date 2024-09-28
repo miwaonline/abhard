@@ -216,7 +216,7 @@ def print_doc(printer_name):
     app_status["requests_served"]["printer"] += 1
     for printer in config["printer"]:
         if printer["name"] == printer_name:
-            res = print_document(printer_name, request.json)
+            res = print_document(printer, request.json)
             return jsonify(res), 200
     return jsonify({"result": "error", "message": "Printer not found"}), 404
 # To work with file upload:

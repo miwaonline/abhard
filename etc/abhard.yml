@@ -26,11 +26,4 @@ scaner:
     socket_host: "192.168.1.2"
 printer:
   - name: "printer0"
-    type: "device"
-    device: "/dev/printer0"
-  - name: "printer1"
-    type: "textfile"
-    path: "/var/log/abhard/"
-  - name: "printer2"
-    type: "system"
-    device: "System Printer"
+    type: "dummy"

@@ -26,17 +26,40 @@ scaner:
     type: "serial"
     device: "/dev/scaner0"
     socket_port: 8765
+    # Usually you dont need to change these
+    # baudrate: 9600
+    # bytesize: 8
+    # timeout: 1
+    # parity: None
+    # stopbits: None
+    # xonxoff: False
+    # dsrdtr: True
   - name: "scaner1"
     type: "redirect"
     socket_port: 8765
     socket_host: "192.168.1.2"
 printer:
   - name: "printer0"
-    type: "device"
-    device: "/dev/printer0"
+    type: "usb"
+    vendor_id: "0x1234"
+    product_id: "0x5678"
+    # in_ep: 12  # lsusb -vvv -d xxxx:xxxx | grep iInterface
+    # out_ep: 1  # lsusb -vvv -d xxxx:xxxx | grep bEndpointAddress | grep OUT
   - name: "printer1"
-    type: "textfile"
-    path: "/var/log/abhard/printer1.log"
+    type: "serial"
+    device: "/dev/ttyS0" # COM1 in Windows
   - name: "printer2"
-    type: "system"
-    device: "System Printer"
+    type: "file"
+    device: "/dev/printer1"
+  - name: "printer3"
+    type: "network"
+    host: "237.84.2.178"
+    port: 9100
+  - name: "printer4"
+    type: "cups"
+    printer_name: "CUPS printer3"
+  - name: "printer5"
+    type: "windows"
+    printer_name: "Windows printer4"
+  - name: "printer6"
+    type: "dummy"
