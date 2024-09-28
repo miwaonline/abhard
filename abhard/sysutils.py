@@ -3,6 +3,10 @@ import yaml
 import sys
 from pathlib import Path
 
+
+version = "3.0.0.11"
+
+
 # Load configuration from YAML file
 path = Path(__file__).parent.parent.absolute()
 cfg = path / "etc" / "abhard.yml"
@@ -40,6 +44,14 @@ prro_file_handler = logging.FileHandler(
 prro_file_handler.setFormatter(log_format)
 prro_logger.setLevel(logging.INFO)
 
+# Set up printer logger
+prnt_logger = logging.getLogger("printer")
+prnt_file_handler = logging.FileHandler(
+    Path(config["log"]["path"]) / "printer.log"
+)
+prnt_file_handler.setFormatter(log_format)
+prnt_logger.setLevel(logging.INFO)
+
 # Set up logging
 if sys.stdin and sys.stdin.isatty() and "unittest" not in sys.modules.keys():
     console_handler = logging.StreamHandler()
@@ -47,12 +59,14 @@ if sys.stdin and sys.stdin.isatty() and "unittest" not in sys.modules.keys():
     main_logger.addHandler(console_handler)
     prro_logger.addHandler(console_handler)
     scan_logger.addHandler(console_handler)
+    prnt_logger.addHandler(console_handler)
 else:
     main_logger.addHandler(main_file_handler)
     prro_logger.addHandler(prro_file_handler)
     scan_logger.addHandler(scan_file_handler)
+    prnt_logger.addHandler(prnt_file_handler)
 
 # DEBUG! REMOVE ASAP!
-main_logger.addHandler(main_file_handler)
-prro_logger.addHandler(prro_file_handler)
-scan_logger.addHandler(scan_file_handler)
+# main_logger.addHandler(main_file_handler)
+# prro_logger.addHandler(prro_file_handler)
+# scan_logger.addHandler(scan_file_handler)

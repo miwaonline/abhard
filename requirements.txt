@@ -4,3 +4,4 @@ pyyaml
 simplejson
 coverage
 requests
+python-escpos

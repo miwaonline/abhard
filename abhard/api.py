@@ -1,11 +1,11 @@
 from flask import Blueprint, jsonify, request, render_template
-from sysutils import main_logger, config
+from sysutils import main_logger, config, version
 from http_utils import post_command, post_document
+from printer import print_document
 import base64
+
+
 api = Blueprint("api", __name__)
-version = "3.0.0.11"
-
-
 rro_objects = {}
 scaner_threads = {}
 tcpsocket_threads = {}
@@ -15,6 +15,7 @@ app_status = {
         "doc": 0,
         "data": 0,
         "status": 0,
+        "printer": 0,
     }
 }
 
@@ -205,3 +206,18 @@ def rro_doc(rro_id):
     main_logger.info(f"Posting document {ordernum}")
     res, status = post_document(rroobj, xmlcontent)
     return jsonify(res), status
+
+
+@api.route(
+    "/api/printer/<string:printer_name>/",
+    methods=["POST"],
+)
+def print_doc(printer_name):
+    app_status["requests_served"]["printer"] += 1
+    for printer in config["printer"]:
+        if printer["name"] == printer_name:
+            res = print_document(printer_name, request.json)
+            return jsonify(res), 200
+    return jsonify({"result": "error", "message": "Printer not found"}), 404
+# To work with file upload:
+# https://stackoverflow.com/questions/56766072/post-method-to-upload-file-with-json-object-in-python-flask-app
