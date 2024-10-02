@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-version = "3.0.0.11"
+version = "3.0.0.12"
 
 
 # Load configuration from YAML file
@@ -65,8 +65,3 @@ else:
     prro_logger.addHandler(prro_file_handler)
     scan_logger.addHandler(scan_file_handler)
     prnt_logger.addHandler(prnt_file_handler)
-
-# DEBUG! REMOVE ASAP!
-# main_logger.addHandler(main_file_handler)
-# prro_logger.addHandler(prro_file_handler)
-# scan_logger.addHandler(scan_file_handler)

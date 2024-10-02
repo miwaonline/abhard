@@ -3,6 +3,7 @@ from sysutils import main_logger, config, version
 from http_utils import post_command, post_document
 from printer import print_document
 import base64
+import json
 
 
 api = Blueprint("api", __name__)
@@ -214,10 +215,11 @@ def rro_doc(rro_id):
 )
 def print_doc(printer_name):
     app_status["requests_served"]["printer"] += 1
+    main_logger.info(f"Printing document to {printer_name}")
     for printer in config["printer"]:
         if printer["name"] == printer_name:
-            res = print_document(printer, request.json)
+            doc = base64.b64decode(request.json["content"]).decode("utf-8")
+            jsondoc = json.loads(doc)
+            res = print_document(printer, jsondoc)
             return jsonify(res), 200
     return jsonify({"result": "error", "message": "Printer not found"}), 404
-# To work with file upload:
-# https://stackoverflow.com/questions/56766072/post-method-to-upload-file-with-json-object-in-python-flask-app
