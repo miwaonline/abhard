@@ -41,10 +41,12 @@ scaner:
 printer:
   - name: "printer0"
     type: "usb"
-    vendor_id: "0x1234"
-    product_id: "0x5678"
+    vendor_id: 0x1234
+    product_id: 0x5678
     # in_ep: 12  # lsusb -vvv -d xxxx:xxxx | grep iInterface
     # out_ep: 1  # lsusb -vvv -d xxxx:xxxx | grep bEndpointAddress | grep OUT
+    # profile: 'default' # https://python-escpos.readthedocs.io/en/latest/printer_profiles/available-profiles.html
+    # width: 305 # optional; better to set proper profile
   - name: "printer1"
     type: "serial"
     device: "/dev/ttyS0" # COM1 in Windows
