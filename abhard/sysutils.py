@@ -60,6 +60,10 @@ if sys.stdin and sys.stdin.isatty() and "unittest" not in sys.modules.keys():
     prro_logger.addHandler(console_handler)
     scan_logger.addHandler(console_handler)
     prnt_logger.addHandler(console_handler)
+    main_logger.propagate = False
+    prro_logger.propagate = False
+    scan_logger.propagate = False
+    prnt_logger.propagate = False
 else:
     main_logger.addHandler(main_file_handler)
     prro_logger.addHandler(prro_file_handler)
