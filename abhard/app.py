@@ -1,9 +1,10 @@
 from flask import Flask
+import signal
+import sys
+from waitress import serve
 from sysutils import main_logger, config
 from rro_eusign import EUSign
 from scaner_thread import ScanerThread, TCPSocketThread
-import signal
-import sys
 from api import api, rro_objects, tcpsocket_threads, scaner_threads
 
 app = Flask("abhard")
@@ -43,4 +44,5 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=config["webservice"]["port"])
+    # app.run(host="0.0.0.0", port=config["webservice"]["port"])
+    serve(app, host="0.0.0.0", port=config["webservice"]["port"])
