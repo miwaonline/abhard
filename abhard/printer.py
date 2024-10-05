@@ -96,6 +96,23 @@ def print_header(prn: printer.Dummy, doc_header: dict, width=None):
         prn.qr(doc_header["qr"]["value"], center=not width)
 
 
+def print_content(prn: printer.Dummy, doc_content: dict, width=None):
+    for line in doc_content:
+        prn.set(align="left", bold=False)
+        name_render = (render_string(f'{line["name"]}', width))
+        for name_line in name_render:
+            prn.textln(name_line)
+        val = f'{line["amount"]} x {line["price"]:.2f}'
+        if width:
+            filler = " " * (width - len(line["code"]) - len(val))
+            prn.textln(f'{line["code"]}{filler}{val}')
+        else:
+            prn.set(align="left")
+            prn.text(f'{line["code"]}')
+            prn.set(align="right")
+            prn.textln(val)
+
+
 def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
     if doc_footer.get("barcode"):
         prn.barcode(
@@ -116,18 +133,40 @@ def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
         prn.textln(render_string(val, width, "right")[0])
 
 
-def print_content(prn: printer.Dummy, doc_content: dict, width=None):
+def print_report_content(prn: printer.Dummy, doc_content: dict, width=None):
     for line in doc_content:
         prn.set(align="left", bold=False)
-        name_render = (render_string(f'{line["name"]}', width))
-        for name_line in name_render:
-            prn.textln(name_line)
-        val = f'{line["amount"]} x {line["price"]:.2f}'
+        name = (render_string(f'{line["name"]}', width)[0])
+        val = f'{line["price"]:.2f}'
+        prn.text(name)
         if width:
-            filler = " " * (width - len(line["code"]) - len(val))
-            prn.textln(f'{line["code"]}{filler}{val}')
+            filler = " " * (width - len(name) - len(val))
+            prn.textln(f'{filler}{val}')
         else:
-            prn.text(f'{line["code"]}')
+            prn.set(align="right")
+            prn.textln(val)
+
+
+def print_report_footer(prn: printer.Dummy, doc_footer: dict, width=None):
+    if isinstance(doc_footer, dict):
+        if doc_footer.get("barcode"):
+            prn.barcode(
+                code=doc_footer["barcode"]["value"],
+                bc=doc_footer["barcode"]["type"],
+                pos="OFF",
+                align_ct=not width,
+            )
+        if doc_footer.get("qr"):
+            prn.qr(doc_footer["qr"]["value"], center=not width)
+    for line in doc_footer:
+        prn.set(align="left", bold=False)
+        name = f'{line["name"]}'
+        val = f'{line["value"]:.2f}'
+        if width:
+            filler = " " * (width - len(name) - len(val))
+            prn.textln(f'{name}{filler}{val}')
+        else:
+            prn.text(name)
             prn.set(align="right")
             prn.textln(val)
 
@@ -138,12 +177,17 @@ def print_document(printercfg, doc):
     prn.open()
     prnt_logger.info("Printing document")
     prnt_logger.info(doc)
-    print_header(prn, doc["header"], printercfg.get("width", None))
-    print_content(prn, doc["content"], printercfg.get("width", None))
-    print_footer(prn, doc["footer"], printercfg.get("width", None))
+    if doc["meta"]["type"] == "receipt":
+        print_header(prn, doc["header"], printercfg.get("width"))
+        print_content(prn, doc["content"], printercfg.get("width"))
+        print_footer(prn, doc["footer"], printercfg.get("width"))
+    elif doc["meta"]["type"] == "report":
+        print_header(prn, doc["header"], printercfg.get("width"))
+        print_report_content(prn, doc["content"], printercfg.get("width"))
+        print_report_footer(prn, doc["footer"], printercfg.get("width"))
     prn.cut()
     if dummy:
-        prnt_logger.info(prn.output())
+        prnt_logger.info(str(prn.output))
     else:
         prn.close()
     prnt_logger.info("Document printed")
