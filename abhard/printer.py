@@ -94,86 +94,99 @@ def render_string(s: str, n: int, align: str = "left"):
         return chunks
 
 
-def print_doc_native(prn: printer.Dummy, doc: dict):
-    prn.set(align="center", bold=True)
-    prn.textln(doc["header"]["title"])
-    prn.textln(doc["header"]["date"])
-    prn.textln(doc["header"]["time"])
-    if doc["header"].get("barcode"):
+def print_header(
+    prn: printer.Dummy, doc_header: dict, width=None, align_center=True
+):
+    align = "center" if align_center else "left"
+    prn.set(align=align, bold=True)
+    prn.textln(
+        doc_header["title"]
+        if not width
+        else render_string(doc_header["title"], width, align)[0]
+    )
+    prn.textln(
+        doc_header["date"]
+        if not width
+        else render_string(doc_header["date"], width, align)[0]
+    )
+    prn.textln(
+        doc_header["time"]
+        if not width
+        else render_string(doc_header["time"], width, align)[0]
+    )
+    if doc_header.get("barcode"):
         prn.barcode(
-            code=doc["header"]["barcode"]["value"],
-            bc=doc["header"]["barcode"]["type"],
+            code=doc_header["barcode"]["value"],
+            bc=doc_header["barcode"]["type"],
             pos="OFF",
+            align_ct=not width,
         )
-    if doc["header"].get("qr"):
-        prn.qr(doc["header"]["qr"]["value"])
-    for line in doc["content"]:
+    if doc_header.get("qr"):
+        prn.qr(doc_header["qr"]["value"], center=not width)
+
+
+def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
+    if doc_footer.get("barcode"):
+        prn.barcode(
+            code=doc_footer["barcode"]["value"],
+            bc=doc_footer["barcode"]["type"],
+            pos="OFF",
+            align_ct=not width,
+        )
+    if doc_footer.get("qr"):
+        prn.qr(doc_footer["qr"]["value"], center=not width)
+    prn.set(align="right" if not width else "left", bold=False)
+    prn.textln(
+        f'Всього: {doc_footer["summ"]:.2f}'
+        if not width
+        else render_string(
+            f'Всього: {doc_footer["summ"]:.2f}', width, "right"
+        )[0]
+    )
+    if doc_footer.get("discount"):
+        prn.textln(
+            f'Знижка: {doc_footer["discount"]:.2f}'
+            if not width
+            else render_string(
+                f'Знижка: {doc_footer["discount"]:.2f}', width, "right"
+            )[0]
+        )
+        prn.textln(
+            f'Разом: {doc_footer["total"]:.2f}'
+            if not width
+            else render_string(
+                f'Разом: {doc_footer["total"]:.2f}', width, "right"
+            )[0]
+        )
+
+
+def print_content(prn: printer.Dummy, doc_content: dict, width=None):
+    for line in doc_content:
         prn.set(align="left", bold=False)
-        prn.textln(f'{line["name"]}')
-        prn.text(f'{line["code"]}')
-        prn.set(align="right")
-        prn.textln('{line["amount"]} x {line["price"]:.2f}')
-    if doc["footer"].get("barcode"):
-        prn.barcode(
-            code=doc["footer"]["barcode"]["value"],
-            bc=doc["footer"]["barcode"]["type"],
-            pos="OFF",
+        name_render = (
+            [line["name"]]
+            if not width
+            else render_string(f'{line["name"]}', width)
         )
-    if doc["footer"].get("qr"):
-        prn.qr(doc["footer"]["qr"]["value"])
-    prn.set(align="right", bold=False)
-    prn.textln(f'Всього: {doc["footer"]["summ"]:.2f}')
-    if doc["footer"].get("discount"):
-        prn.textln(f'Знижка: {doc["footer"]["discount"]:.2f}')
-        prn.textln(f'Разом: {doc["footer"]["total"]:.2f}')
+        for name_line in name_render:
+            prn.textln(name_line)
+        val = f'{line["amount"]} x {line["price"]:.2f}'
+        if width:
+            filler = " " * (width - len(line["code"]) - len(val))
+            prn.textln(f'{line["code"]}{filler}{val}')
+        else:
+            prn.text(f'{line["code"]}')
+            prn.set(align="right")
+            prn.textln(val)
+
+
+def print_doc_native(prn: printer.Dummy, doc: dict):
+    print_header(prn, doc["header"])
+    print_content(prn, doc["content"])
+    print_footer(prn, doc["footer"])
 
 
 def print_doc_softrender(prn: printer.Dummy, doc: dict, width: int):
-    prn.set(align="left", bold=True)
-    for line in render_string(doc["header"]["title"], width, "center"):
-        prn.textln(line)
-    for line in render_string(doc["header"]["date"], width, "center"):
-        prn.textln(line)
-    for line in render_string(doc["header"]["time"], width, "center"):
-        prn.textln(line)
-    if doc["header"].get("barcode"):
-        prn.barcode(
-            code=doc["header"]["barcode"]["value"],
-            bc=doc["header"]["barcode"]["type"],
-            pos="OFF",
-            align_ct=False,
-        )
-    if doc["header"].get("qr"):
-        prn.qr(doc["header"]["qr"]["value"], center=False)
-    prn.set(align="left", bold=False)
-    for item in doc["content"]:
-        for line in render_string(f'{item["name"]}', width):
-            prn.textln(line)
-        val = f'{item["amount"]} x {item["price"]:.2f}'
-        filler = " " * (width - len(item["code"]) - len(val))
-        prn.textln(
-            f'{item["code"]}{filler}{val}'
-        )
-    if doc["footer"].get("barcode"):
-        prn.barcode(
-            code=doc["footer"]["barcode"]["value"],
-            bc=doc["footer"]["barcode"]["type"],
-            pos="OFF",
-            align_ct=False,
-        )
-    if doc["footer"].get("qr"):
-        prn.qr(doc["footer"]["qr"]["value"], center=False)
-    prn.set(align="left", bold=False)
-    for line in render_string(
-        f'Всього: {doc["footer"]["summ"]:.2f}', width, "right"
-    ):
-        prn.textln(line)
-    if doc["footer"].get("discount"):
-        for line in render_string(
-            f'Знижка: {doc["footer"]["discount"]:.2f}', width, "right"
-        ):
-            prn.textln(line)
-        for line in render_string(
-            f'Разом: {doc["footer"]["total"]:.2f}', width, "right"
-        ):
-            prn.textln(line)
+    print_header(prn, doc["header"], width, align_center=False)
+    print_content(prn, doc["content"], width)
+    print_footer(prn, doc["footer"], width)
