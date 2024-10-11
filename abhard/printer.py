@@ -188,6 +188,7 @@ def print_document(printercfg, doc):
     prn.cut()
     if dummy:
         prnt_logger.info(str(prn.output))
+        prn.clear()
     else:
         prn.close()
     prnt_logger.info("Document printed")

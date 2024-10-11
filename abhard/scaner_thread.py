@@ -141,8 +141,12 @@ class ScanerThread(threading.Thread):
                         scan_logger.warning(f"{self.device} was disconnected")
                         break
             except KeyboardInterrupt:
+                self.tcpthread.running = False
+                self.tcpthread.stop()
                 self.running = False
             except SystemExit:
+                self.tcpthread.running = False
+                self.tcpthread.stop()
                 self.running = False
             except OSError as e:
                 scan_logger.warning(f"OSError {e} in {self.device} thread.")
