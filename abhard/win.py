@@ -40,15 +40,23 @@ class AbhardService(win32serviceutil.ServiceFramework):
         serve(app, host="0.0.0.0", port=config["webservice"]["port"])
 
 
+def install_service():
+    service_name = "Abhard"
+    win32serviceutil.InstallService(
+        AbhardService._svc_name_,
+        AbhardService._svc_display_name_,
+        AbhardService._svc_description_,
+    )
+    win32serviceutil.StartService(service_name)
+    subprocess.run(f"sc config {service_name} start= auto", shell=True, check=True)
+    subprocess.run(
+        f"sc failure {service_name} reset= 60 actions= restart/60000",
+        shell=True,
+    )
+
+
 if __name__ == "__main__":
-    win32serviceutil.HandleCommandLine(AbhardService)
     if "install" in sys.argv:
-        service_name = "Abhard"
-        subprocess.run(f"sc start {service_name}", shell=True, check=True)
-        subprocess.run(
-            f"sc config {service_name} start= auto", shell=True, check=True
-        )
-        subprocess.run(
-            f"sc failure {service_name} reset= 60 actions= restart/60000",
-            shell=True,
-        )
+        install_service()
+    else:
+        win32serviceutil.HandleCommandLine(AbhardService)
