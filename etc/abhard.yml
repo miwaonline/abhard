@@ -9,12 +9,12 @@ http:
     https: socks5://127.0.0.1:8088
 log:
   path: "/var/log/abhard/"
-rro:
-  - name: 'Nelia'
-    type: 'eusign'
-    keyfile: 'keys/Nelia/pb_3783804046.jks'
-    keypass: 'Nelia377'
-    id: 1
+# rro:
+#   - name: 'prro1'
+#     type: 'eusign'
+#     keyfile: 'keys/pb_0123456789.jks'
+#     keypass: 'supersecret'
+#     id: 1
 scaner:
   - name: "scaner0"
     type: "serial"
