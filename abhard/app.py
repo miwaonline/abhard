@@ -2,6 +2,7 @@ from flask import Flask
 import signal
 import sys
 import os
+import traceback
 from waitress import serve
 from sysutils import main_logger, config
 from api import api, rro_objects, tcpsocket_threads, scaner_threads
@@ -10,6 +11,7 @@ if os.name == "nt":
     import win32serviceutil
     import win32service
     import win32event
+    import servicemanager
 
 app = Flask("abhard")
 app.register_blueprint(api)
@@ -89,7 +91,16 @@ if os.name == "nt":
             signal_handler(signal.SIGINT, None)
 
         def SvcDoRun(self):
-            main()
+            servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE,
+                                  servicemanager.PYS_SERVICE_STARTED,
+                                  (self._svc_name_, ''))
+            self.run = True
+            try:
+                main()
+            except Exception as e:
+                servicemanager.LogErrorMsg(e.message)
+                servicemanager.LogErrorMsg(traceback.format_exc())
+                os._exit(-1)
 
     if __name__ == "__main__":
         if len(sys.argv) > 1 and sys.argv[1] in ["install", "update", "remove"]:
