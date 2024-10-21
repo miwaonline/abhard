@@ -74,9 +74,10 @@ def main():
 if os.name == "nt":
 
     class WindowsService(win32serviceutil.ServiceFramework):
-        _svc_name_ = "AbhardService"
-        _svc_display_name_ = "Abhard Flask Service"
-        _svc_description_ = "Flask application running as a Windows service."
+        _svc_name_ = "Abhard"
+        _svc_display_name_ = "Abhard Abacus Service"
+        _svc_description_ = ("Application that works with different hardware "
+                             "and provides unified API for Abacus.")
 
         def __init__(self, args):
             win32serviceutil.ServiceFramework.__init__(self, args)
