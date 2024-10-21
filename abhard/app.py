@@ -98,7 +98,8 @@ if os.name == "nt":
             try:
                 main()
             except Exception as e:
-                servicemanager.LogErrorMsg(e.message)
+                servicemanager.LogErrorMsg(e)
+                servicemanager.LogErrorMsg(e.args)
                 servicemanager.LogErrorMsg(traceback.format_exc())
                 os._exit(-1)
 
