@@ -68,9 +68,20 @@ def signal_handler(sig, frame):
 def main():
     with app.app_context():
         startup_tasks()
-    signal.signal(signal.SIGINT, signal_handler)
     # Start Flask app
     serve(app, host="0.0.0.0", port=config["webservice"]["port"])
+
+
+def run_service():
+    with app.app_context():
+        startup_tasks()
+    try:
+        serve(app, host="0.0.0.0", port=config["webservice"]["port"])
+    except Exception as e:
+        servicemanager.LogErrorMsg(str(e))
+        servicemanager.LogErrorMsg(str(e.args))
+        servicemanager.LogErrorMsg(traceback.format_exc())
+        os._exit(-1)
 
 
 if os.name == "nt":
@@ -95,13 +106,7 @@ if os.name == "nt":
                                   servicemanager.PYS_SERVICE_STARTED,
                                   (self._svc_name_, ''))
             self.run = True
-            try:
-                main()
-            except Exception as e:
-                servicemanager.LogErrorMsg(str(e))
-                servicemanager.LogErrorMsg(str(e.args))
-                servicemanager.LogErrorMsg(traceback.format_exc())
-                os._exit(-1)
+            run_service()
 
     if __name__ == "__main__":
         if len(sys.argv) > 1 and sys.argv[1] in ["install", "update", "remove"]:
