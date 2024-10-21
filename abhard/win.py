@@ -3,7 +3,7 @@ import win32service
 import win32event
 import servicemanager
 import socket
-from app import app
+import app
 from waitress import serve
 from sysutils import config
 
