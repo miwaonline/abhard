@@ -22,8 +22,8 @@ class EUSign:
             exit(1)
         dSettings = {}
         EUSign.pIface.GetFileStoreSettings(dSettings)
-        path = pathlib.Path(__file__).parent.absolute().parent
-        dSettings["szPath"] = f"{path}/cert"
+        path = pathlib.Path(__file__).parent.absolute().parent / 'cert'
+        dSettings["szPath"] = str(path)
         if len(dSettings["szPath"]) == 0:
             prro_logger.info("Crypto settings initialisation failed.")
             EUSign.pIface.Finalize()
