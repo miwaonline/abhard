@@ -68,23 +68,33 @@ def configure_printer(printercfg):
     return p, dummy
 
 
-def render_string(s: str, n=None, align: str = "left"):
-    if not n:
+def render_string(s: str, width=None, align: str = "left"):
+    if not width:
         return [s]
-    chunks = [s[i: i + n] for i in range(0, len(s), n)]
+    chunks = [s[i: i + width] for i in range(0, len(s), width)]
     if align == "center":
-        return [chunk.center(n) for chunk in chunks]
+        return [chunk.center(width) for chunk in chunks]
     elif align == "right":
-        return [chunk.rjust(n) for chunk in chunks]
+        return [chunk.rjust(width) for chunk in chunks]
     else:
         return chunks
 
 
 def print_header(prn: printer.Dummy, doc_header: dict, width=None):
+    def print_field(name):
+        if doc_header.get(name):
+            prn.textln(render_string(doc_header[name], width, "center")[0])
+
     prn.set(align="left" if width else "center", bold=True)
-    prn.textln(render_string(doc_header["title"], width, "center")[0])
-    prn.textln(render_string(doc_header["date"], width, "center")[0])
-    prn.textln(render_string(doc_header["time"], width, "center")[0])
+    print_field("rro_orgname")
+    print_field("rro_pointname")
+    print_field("rro_pointaddr")
+    print_field("rro_tin")
+    print_field("rro_fn")
+    print_field("rro_receiptno")
+    print_field("title")
+    print_field("date")
+    print_field("time")
     if doc_header.get("barcode"):
         prn.barcode(
             code=doc_header["barcode"]["value"],
@@ -114,6 +124,20 @@ def print_content(prn: printer.Dummy, doc_content: dict, width=None):
 
 
 def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
+    prn.set(align="left" if width else "right", bold=False)
+    val = f'Всього: {doc_footer["summ"]:.2f}'
+    prn.textln(render_string(val, width, "right")[0])
+    if doc_footer.get("discount"):
+        val = f'Знижка: {doc_footer["discount"]:.2f}'
+        prn.textln(render_string(val, width, "right")[0])
+        val = f'До сплати: {doc_footer["total"]:.2f}'
+        prn.textln(render_string(val, width, "right")[0])
+    if doc_footer.get("cash"):
+        val = f'Готівка: {doc_footer["cash"]:.2f}'
+        prn.textln(render_string(val, width, "right")[0])
+    if doc_footer.get("card"):
+        val = f'Картка: {doc_footer["card"]:.2f}'
+        prn.textln(render_string(val, width, "right")[0])
     if doc_footer.get("barcode"):
         prn.barcode(
             code=doc_footer["barcode"]["value"],
@@ -123,14 +147,6 @@ def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
         )
     if doc_footer.get("qr"):
         prn.qr(doc_footer["qr"]["value"], center=not width)
-    prn.set(align="left" if width else "right", bold=False)
-    val = f'Всього: {doc_footer["summ"]:.2f}'
-    prn.textln(render_string(val, width, "right")[0])
-    if doc_footer.get("discount"):
-        val = f'Знижка: {doc_footer["discount"]:.2f}'
-        prn.textln(render_string(val, width, "right")[0])
-        val = f'Разом: {doc_footer["total"]:.2f}'
-        prn.textln(render_string(val, width, "right")[0])
 
 
 def print_report_content(prn: printer.Dummy, doc_content: dict, width=None):

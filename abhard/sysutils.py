@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-version = "3.0.0.18"
+version = "3.0.0.19"
 
 
 # Load configuration from YAML file

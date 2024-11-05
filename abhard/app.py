@@ -78,9 +78,10 @@ def run_service():
     try:
         serve(app, host="0.0.0.0", port=config["webservice"]["port"])
     except Exception as e:
-        servicemanager.LogErrorMsg(str(e))
-        servicemanager.LogErrorMsg(str(e.args))
-        servicemanager.LogErrorMsg(traceback.format_exc())
+        if os.name == "nt":
+            servicemanager.LogErrorMsg(str(e))
+            servicemanager.LogErrorMsg(str(e.args))
+            servicemanager.LogErrorMsg(traceback.format_exc())
         os._exit(-1)
 
 
