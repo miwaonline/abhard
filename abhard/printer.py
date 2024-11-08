@@ -96,8 +96,12 @@ def print_header(prn: printer.Dummy, doc_header: dict, width=None):
     print_field("date")
     print_field("time")
     if doc_header.get("barcode"):
+        if doc_header["barcode"]["type"] == "code128":
+            barcode = '{B' + doc_header["barcode"]["value"]
+        else:
+            barcode = doc_header["barcode"]["value"]
         prn.barcode(
-            code=doc_header["barcode"]["value"],
+            code=barcode,
             bc=doc_header["barcode"]["type"],
             pos="OFF",
             align_ct=not width,
@@ -139,8 +143,12 @@ def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
         val = f'Картка: {doc_footer["card"]:.2f}'
         prn.textln(render_string(val, width, "right")[0])
     if doc_footer.get("barcode"):
+        if doc_footer["barcode"]["type"] == "code128":
+            barcode = '{B' + doc_footer["barcode"]["value"]
+        else:
+            barcode = doc_footer["barcode"]["value"]
         prn.barcode(
-            code=doc_footer["barcode"]["value"],
+            code=barcode,
             bc=doc_footer["barcode"]["type"],
             pos="OFF",
             align_ct=not width,
@@ -152,13 +160,15 @@ def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
 def print_report_content(prn: printer.Dummy, doc_content: dict, width=None):
     for line in doc_content:
         prn.set(align="left", bold=False)
-        name = (render_string(f'{line["name"]}', width)[0])
+        name = render_string(f'{line["name"]}', width)[0]
         val = f'{line["price"]:.2f}'
-        prn.text(name)
         if width:
+            prn.text(name)
             filler = " " * (width - len(name) - len(val))
             prn.textln(f'{filler}{val}')
         else:
+            prn.set(align="left")
+            prn.textln(name)
             prn.set(align="right")
             prn.textln(val)
 
@@ -166,8 +176,12 @@ def print_report_content(prn: printer.Dummy, doc_content: dict, width=None):
 def print_report_footer(prn: printer.Dummy, doc_footer: dict, width=None):
     if isinstance(doc_footer, dict):
         if doc_footer.get("barcode"):
+            if doc_footer["barcode"]["type"] == "code128":
+                barcode = '{B' + doc_footer["barcode"]["value"]
+            else:
+                barcode = doc_footer["barcode"]["value"]
             prn.barcode(
-                code=doc_footer["barcode"]["value"],
+                code=barcode,
                 bc=doc_footer["barcode"]["type"],
                 pos="OFF",
                 align_ct=not width,
