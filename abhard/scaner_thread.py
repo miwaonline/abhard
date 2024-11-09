@@ -1,10 +1,10 @@
 import threading
 import os
-import select
 import time
 from sysutils import main_logger, scan_logger
 import string
 import socket
+import serial
 
 # the last 5 chars are '\t\n\r\x0b\x0c', we dont want them in scanned code
 printablenows = string.printable[:-5]
@@ -111,6 +111,19 @@ class ScanerThread(threading.Thread):
                 main_logger.info(f"Thread {self.name} stopped")
                 exit(0)
             try:
+                ser = serial.Serial(
+                    port=self.device,
+                    baudrate=9600,
+                    timeout=1  # Non-blocking read with a timeout of 1 second
+                )
+                scan_logger.info(f"Started {self.device} watching")
+                while self.running:
+                    if ser.in_waiting:
+                        data = ser.read(ser.in_waiting).decode("utf-8")
+                        data = "".join(filter(lambda x: x in printablenows, data))
+                        scan_logger.info(f"Got {data} from {self.device}")
+                        self.tcpthread.unicast_message(f"{data}")
+                    '''
                 with open(self.device, "r") as file:
                     scan_logger.info(f"Started {self.device} watching")
                     buf = ""
@@ -137,6 +150,7 @@ class ScanerThread(threading.Thread):
                                     )
                                     self.tcpthread.unicast_message(f"{buf}")
                                     buf = ""
+                    '''
                     if not os.path.exists(self.device):
                         scan_logger.warning(f"{self.device} was disconnected")
                         break
