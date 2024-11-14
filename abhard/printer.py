@@ -121,10 +121,8 @@ def print_content(prn: printer.Dummy, doc_content: dict, width=None):
             filler = " " * (width - len(line["code"]) - len(val))
             prn.textln(f'{line["code"]}{filler}{val}')
         else:
-            prn.set(align="left")
-            prn.text(f'{line["code"]}')
             prn.set(align="right")
-            prn.textln(val)
+            prn.textln(f'{line["code"]} x {val}')
 
 
 def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
@@ -196,9 +194,8 @@ def print_report_footer(prn: printer.Dummy, doc_footer: dict, width=None):
             filler = " " * (width - len(name) - len(val))
             prn.textln(f'{name}{filler}{val}')
         else:
-            prn.text(name)
             prn.set(align="right")
-            prn.textln(val)
+            prn.textln(f'{name}: {val}')
 
 
 def print_document(printercfg, doc):
