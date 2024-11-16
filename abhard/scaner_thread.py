@@ -123,34 +123,6 @@ class ScanerThread(threading.Thread):
                         data = "".join(filter(lambda x: x in printablenows, data))
                         scan_logger.info(f"Got {data} from {self.device}")
                         self.tcpthread.unicast_message(f"{data}")
-                    '''
-                with open(self.device, "r") as file:
-                    scan_logger.info(f"Started {self.device} watching")
-                    buf = ""
-                    poller = select.poll()
-                    poller.register(file, select.POLLIN)
-                    while self.running:
-                        events = poller.poll(0.1)
-                        if not events:
-                            continue
-                        for _, flag in events:
-                            if flag & select.POLLERR or flag & select.POLLHUP:
-                                raise OSError("Device was disconnected")
-                            if flag & select.POLLIN:
-                                while c := file.read(1):
-                                    buf += c
-                                    if c in separators:
-                                        break
-                                buf = "".join(
-                                    filter(lambda x: x in printablenows, buf)
-                                )
-                                if len(buf):
-                                    scan_logger.info(
-                                        f"Got {buf} from {self.device}"
-                                    )
-                                    self.tcpthread.unicast_message(f"{buf}")
-                                    buf = ""
-                    '''
                     if not os.path.exists(self.device):
                         scan_logger.warning(f"{self.device} was disconnected")
                         break
