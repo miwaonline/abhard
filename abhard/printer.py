@@ -27,26 +27,20 @@ def configure_printer(printercfg):
             profile=printercfg.get("profile", "default"),
         )
         prnt_logger.info("Configured file printer")
-    elif (
-        printtype == "network" and printer.Network.is_usable()
-    ):
+    elif printtype == "network" and printer.Network.is_usable():
         p = printer.Network(
             host=printercfg["host"],
             port=printercfg["port"],
             profile=printercfg.get("profile", "default"),
         )
         prnt_logger.info("Configured network printer")
-    elif (
-        printtype == "cups" and printer.CupsPrinter.is_usable()
-    ):
+    elif printtype == "cups" and printer.CupsPrinter.is_usable():
         p = printer.CupsPrinter(
             name=printercfg["name"],
             profile=printercfg.get("profile", "default"),
         )
         prnt_logger.info("Configured CUPS printer")
-    elif (
-        printtype == "windows" and printer.Win32Raw.is_usable()
-    ):
+    elif printtype == "windows" and printer.Win32Raw.is_usable():
         p = printer.Win32Raw(
             name=printercfg["name"],
             profile=printercfg.get("profile", "default"),
@@ -80,7 +74,9 @@ def render_string(s: str, width=None, align: str = "left"):
         return chunks
 
 
-def print_header(prn: printer.Dummy, doc_header: dict, width=None):
+def print_header(
+    prn: printer.Dummy, doc_header: dict, width=None, soft_render=False
+):
     def print_field(name):
         if doc_header.get(name):
             prn.textln(render_string(doc_header[name], width, "center")[0])
@@ -105,6 +101,8 @@ def print_header(prn: printer.Dummy, doc_header: dict, width=None):
             bc=doc_header["barcode"]["type"],
             pos="OFF",
             align_ct=not width,
+            force_software=soft_render,
+            width=2,
         )
     if doc_header.get("qr"):
         prn.qr(doc_header["qr"]["value"], center=not width)
@@ -113,7 +111,7 @@ def print_header(prn: printer.Dummy, doc_header: dict, width=None):
 def print_content(prn: printer.Dummy, doc_content: dict, width=None):
     for line in doc_content:
         prn.set(align="left", bold=False)
-        name_render = (render_string(f'{line["name"]}', width))
+        name_render = render_string(f'{line["name"]}', width)
         for name_line in name_render:
             prn.textln(name_line)
         val = f'{line["amount"]} x {line["price"]:.2f}'
@@ -125,7 +123,9 @@ def print_content(prn: printer.Dummy, doc_content: dict, width=None):
             prn.textln(f'{line["code"]} x {val}')
 
 
-def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
+def print_footer(
+    prn: printer.Dummy, doc_footer: dict, width=None, soft_render=False
+):
     prn.set(align="left" if width else "right", bold=False)
     val = f'Всього: {doc_footer["summ"]:.2f}'
     prn.textln(render_string(val, width, "right")[0])
@@ -150,6 +150,8 @@ def print_footer(prn: printer.Dummy, doc_footer: dict, width=None):
             bc=doc_footer["barcode"]["type"],
             pos="OFF",
             align_ct=not width,
+            force_software=soft_render,
+            width=2,
         )
     if doc_footer.get("qr"):
         prn.qr(doc_footer["qr"]["value"], center=not width)
@@ -163,7 +165,7 @@ def print_report_content(prn: printer.Dummy, doc_content: dict, width=None):
         if width:
             prn.text(name)
             filler = " " * (width - len(name) - len(val))
-            prn.textln(f'{filler}{val}')
+            prn.textln(f"{filler}{val}")
         else:
             prn.set(align="left")
             prn.textln(name)
@@ -171,7 +173,9 @@ def print_report_content(prn: printer.Dummy, doc_content: dict, width=None):
             prn.textln(val)
 
 
-def print_report_footer(prn: printer.Dummy, doc_footer: dict, width=None):
+def print_report_footer(
+    prn: printer.Dummy, doc_footer: dict, width=None, soft_render=False
+):
     if isinstance(doc_footer, dict):
         if doc_footer.get("barcode"):
             if doc_footer["barcode"]["type"].lower() == "code128":
@@ -183,6 +187,8 @@ def print_report_footer(prn: printer.Dummy, doc_footer: dict, width=None):
                 bc=doc_footer["barcode"]["type"],
                 pos="OFF",
                 align_ct=not width,
+                force_software=soft_render,
+                width=2,
             )
         if doc_footer.get("qr"):
             prn.qr(doc_footer["qr"]["value"], center=not width)
@@ -192,10 +198,10 @@ def print_report_footer(prn: printer.Dummy, doc_footer: dict, width=None):
         val = f'{line["value"]:.2f}'
         if width:
             filler = " " * (width - len(name) - len(val))
-            prn.textln(f'{name}{filler}{val}')
+            prn.textln(f"{name}{filler}{val}")
         else:
             prn.set(align="right")
-            prn.textln(f'{name}: {val}')
+            prn.textln(f"{name}: {val}")
 
 
 def print_document(printercfg, doc):
@@ -205,13 +211,33 @@ def print_document(printercfg, doc):
     prnt_logger.info("Printing document")
     prnt_logger.info(doc)
     if doc["meta"]["type"] == "receipt":
-        print_header(prn, doc["header"], printercfg.get("width"))
+        print_header(
+            prn,
+            doc["header"],
+            printercfg.get("width"),
+            printercfg.get("soft_render"),
+        )
         print_content(prn, doc["content"], printercfg.get("width"))
-        print_footer(prn, doc["footer"], printercfg.get("width"))
+        print_footer(
+            prn,
+            doc["footer"],
+            printercfg.get("width"),
+            printercfg.get("soft_render"),
+        )
     elif doc["meta"]["type"] == "report":
-        print_header(prn, doc["header"], printercfg.get("width"))
+        print_header(
+            prn,
+            doc["header"],
+            printercfg.get("width"),
+            printercfg.get("soft_render"),
+        )
         print_report_content(prn, doc["content"], printercfg.get("width"))
-        print_report_footer(prn, doc["footer"], printercfg.get("width"))
+        print_report_footer(
+            prn,
+            doc["footer"],
+            printercfg.get("width"),
+            printercfg.get("soft_render"),
+        )
     prn.cut()
     if dummy:
         prnt_logger.info(str(prn.output))
