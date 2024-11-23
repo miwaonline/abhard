@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-version = "3.0.0.22"
+version = "3.0.0.23"
 
 
 # Load configuration from YAML file
@@ -87,7 +87,7 @@ def make_code128(data: str) -> str:
         'o': 79, 'p': 80, 'q': 81, 'r': 82, 's': 83, 't': 84, 'u': 85, 'v': 86,
         'w': 87, 'x': 88, 'y': 89, 'z': 90, '{': 91, '|': 92, '}': 93, '~': 94,
         'DEL': 95, 'FNC3': 96, 'FNC2': 97, 'SHIFT': 98, 'Code C': 99,
-        'FNC4': 100, 'FNC1': 101, 'START A': 103, 'START B': 104, 'START C': 105
+        'FNC4': 100, 'FNC1': 101, 'STARTA': 103, 'STARTB': 104, 'STARTC': 105
     }
     start_value = 104  # Assuming START B is used as in the escpos library
     start_chars = '{B'

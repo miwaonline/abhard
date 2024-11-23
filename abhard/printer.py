@@ -1,4 +1,4 @@
-from sysutils import prnt_logger, make_code128
+from sysutils import prnt_logger
 from escpos import printer
 
 
@@ -92,12 +92,8 @@ def print_header(
     print_field("date")
     print_field("time")
     if doc_header.get("barcode"):
-        if doc_header["barcode"]["type"].lower() == "code128":
-            barcode = make_code128(doc_header["barcode"]["value"])
-        else:
-            barcode = doc_header["barcode"]["value"]
         prn.barcode(
-            code=barcode,
+            code=doc_header["barcode"]["value"],
             bc=doc_header["barcode"]["type"],
             pos="OFF",
             align_ct=not width,
@@ -141,12 +137,8 @@ def print_footer(
         val = f'Картка: {doc_footer["card"]:.2f}'
         prn.textln(render_string(val, width, "right")[0])
     if doc_footer.get("barcode"):
-        if doc_footer["barcode"]["type"].lower() == "code128":
-            barcode = make_code128(doc_footer["barcode"]["value"])
-        else:
-            barcode = doc_footer["barcode"]["value"]
         prn.barcode(
-            code=barcode,
+            code=doc_footer["barcode"]["value"],
             bc=doc_footer["barcode"]["type"],
             pos="OFF",
             align_ct=not width,
@@ -178,12 +170,8 @@ def print_report_footer(
 ):
     if isinstance(doc_footer, dict):
         if doc_footer.get("barcode"):
-            if doc_footer["barcode"]["type"].lower() == "code128":
-                barcode = make_code128(doc_footer["barcode"]["value"])
-            else:
-                barcode = doc_footer["barcode"]["value"]
             prn.barcode(
-                code=barcode,
+                code=doc_footer["barcode"]["value"],
                 bc=doc_footer["barcode"]["type"],
                 pos="OFF",
                 align_ct=not width,

@@ -27,3 +27,4 @@ scaner:
 printer:
   - name: "printer0"
     type: "dummy"
+    soft_render: True
