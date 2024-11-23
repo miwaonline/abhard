@@ -124,7 +124,7 @@ def get_scaner(scaner_name):
             }
         )
     app_status["requests_served"]["data"] += 1
-    for scaner in config["scaner"]:
+    for scaner in config.get("scaner", []):
         if scaner["name"] == scaner_name:
             return jsonify(
                 {
