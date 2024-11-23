@@ -118,14 +118,16 @@ class ScanerThread(threading.Thread):
                 )
                 scan_logger.info(f"Started {self.device} watching")
                 while self.running:
-                    if ser.in_waiting:
-                        data = ser.read(ser.in_waiting).decode("utf-8")
+                    data = ser.read(ser.in_waiting).decode("utf-8").strip()
+                    if data:
                         data = "".join(filter(lambda x: x in printablenows, data))
                         scan_logger.info(f"Got {data} from {self.device}")
                         self.tcpthread.unicast_message(f"{data}")
                     if not os.path.exists(self.device):
                         scan_logger.warning(f"{self.device} was disconnected")
                         break
+            except serial.SerialException:
+                scan_logger.warning(f"SerialException for {self.device}; closing it.")
             except KeyboardInterrupt:
                 self.tcpthread.running = False
                 self.tcpthread.stop()
