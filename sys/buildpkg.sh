@@ -65,7 +65,7 @@ echo "/opt/abhard/etc/abhard.yml" > debian/conffiles
 # Create the postinst script
 echo "#!/bin/bash
 set -e
-pip3 install python-escpos
+pip3 install python-escpos --break-system-packages
 systemctl daemon-reload
 systemctl enable abhard.service
 systemctl start abhard.service" > debian/postinst
