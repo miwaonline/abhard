@@ -5,4 +5,5 @@ simplejson
 coverage
 requests
 python-escpos
+pyserial
 waitress

@@ -1,5 +1,5 @@
 #!/bin/bash
-ABHARD_PKG_VERSION=3.0.0-1
+ABHARD_PKG_VERSION=3.0.0-5
 # Create necessary directories
 mkdir -p debian
 mkdir -p opt/abhard/{abhard,etc,cert,keys,templates}
@@ -41,7 +41,7 @@ Build-Depends: debhelper (>= 11)
 
 Package: abhard
 Architecture: any
-Depends: \${shlibs:Depends}, \${misc:Depends}, python3-simplejson, python3-flask, systemd, python3-yaml, python3-requests, python3-waitress
+Depends: \${shlibs:Depends}, \${misc:Depends}, python3-simplejson, python3-flask, systemd, python3-yaml, python3-requests, python3-waitress, python3-pip, python3-serial
 Description: Abhard package
  This package installs Abhard software." > debian/control
 
@@ -65,7 +65,9 @@ echo "/opt/abhard/etc/abhard.yml" > debian/conffiles
 # Create the postinst script
 echo "#!/bin/bash
 set -e
-pip3 install python-escpos --break-system-packages
+chown nobody:nogroup /var/log/abhard
+export PIP_BREAK_SYSTEM_PACKAGES=1
+pip3 install python-escpos
 systemctl daemon-reload
 systemctl enable abhard.service
 systemctl start abhard.service" > debian/postinst
