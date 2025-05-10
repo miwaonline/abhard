@@ -19,12 +19,16 @@ app.register_blueprint(api)
 
 def initialize_rro_objects():
     if config.get("rro"):
-        from rro_eusign import EUSign
+        try:
+            from rro_eusign import EUSign
 
-        for rro in config["rro"]:
-            rroobj = EUSign(rro["id"], rro["keyfile"], rro["keypass"])
-            rro_objects[rro["id"]] = rroobj
-            main_logger.info(f"Initialized RRO {rro['id']}")
+            for rro in config["rro"]:
+                rroobj = EUSign(rro["id"], rro["keyfile"], rro["keypass"])
+                rro_objects[rro["id"]] = rroobj
+                main_logger.info(f"Initialized RRO {rro['id']}")
+        except Exception:
+            main_logger.error(f"Error initializing RRO: {traceback.format_exc()}",
+                              exc_info=traceback.format_exc())
 
 
 def initialize_scaner_threads():
