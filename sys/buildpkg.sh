@@ -1,5 +1,5 @@
 #!/bin/bash
-ABHARD_PKG_VERSION=3.0.0-5
+ABHARD_PKG_VERSION=3.0.1-0
 # Create necessary directories
 mkdir -p debian
 mkdir -p opt/abhard/{abhard,etc,cert,keys,templates}
