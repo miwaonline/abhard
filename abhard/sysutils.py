@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 
-version = "3.0.1.26"
+version = "3.0.2.27"
 
 
 # Load configuration from YAML file

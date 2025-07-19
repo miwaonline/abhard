@@ -109,6 +109,11 @@ def get_api_list():
             "name": "EUSign XML document",
             "type": "post",
         },
+        {
+            "url": "api/printer/{name}/",
+            "name": "Print a document to a preconfigured printer",
+            "type": "post",
+        },
     )
     return jsonify(result)
 
